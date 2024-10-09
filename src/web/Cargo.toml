@@ -1,0 +1,14 @@
+[package]
+name = "rust-kafka-web"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde_json = {workspace = true}
+tokio = {workspace = true}
+tracing = {workspace = true}
+tracing-subscriber = {workspace = true}
+serde = { version = "1.0.210", features = ["derive"] }
+
+axum = "0.7.7"
+rdkafka = "0.36.2"
