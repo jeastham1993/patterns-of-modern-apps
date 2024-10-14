@@ -3,13 +3,15 @@ resolver = "2"
 members = [
   "src/backend",
   "src/web",
+  "src/core",
+  "src/simulator",
 ]
 
 [workspace.dependencies]
 futures = "0.3"
 anyhow = "1.0"
 thiserror = "1.0"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
 serde = "1.0"
 serde_json = "1.0"
 tracing-subscriber = "0.3.8"

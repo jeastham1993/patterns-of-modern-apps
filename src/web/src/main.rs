@@ -1,42 +1,30 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
-    routing::{get, post},
+    routing::get,
     Json, Router,
 };
-use rdkafka::{
-    producer::{FutureProducer, FutureRecord},
-    ClientConfig,
-};
-use serde::{Deserialize, Serialize};
+use loyalty_core::{ApplicationAdpaters, LoyaltyDto};
 
 pub struct AppState {
-    pub kafka_producer: Arc<FutureProducer>,
+    pub application: Arc<ApplicationAdpaters>,
 }
 
 #[tokio::main]
 async fn main() {
     // initialize tracing
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt().init();
 
-    let producer: FutureProducer = ClientConfig::new()
-        .set("bootstrap.servers", "localhost:9092")
-        .set("message.timeout.ms", "5000")
-        .create()
-        .expect("Producer creation error");
+    let application_adapters = ApplicationAdpaters::new().await;
 
     let shared_state = Arc::new(AppState {
-        kafka_producer: Arc::new(producer),
+        application: Arc::new(application_adapters),
     });
 
-    // build our application with a route
     let app = Router::new()
-        // `GET /` goes to `root`
-        .route("/", get(root))
-        // `POST /users` goes to `create_user`
-        .route("/users", post(create_user))
+        .route("/loyalty/:customer_id", get(get_loyalty_points))
         .with_state(shared_state);
 
     // run our app with hyper, listening globally on port 3000
@@ -44,46 +32,14 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-// basic handler that responds with a static string
-async fn root() -> &'static str {
-    "Hello, World!"
-}
-
-async fn create_user(
+async fn get_loyalty_points(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<CreateUser>,
-) -> (StatusCode, Json<User>) {
-    // insert your application logic here
-    let user = User {
-        id: 1337,
-        username: payload.username,
-    };
+    path: Path<String>,
+) -> (StatusCode, Json<Option<LoyaltyDto>>) {
+    let loyalty_points = state.application.retrieve_loyalty_query_handler.handle(path.0).await;
 
-    let delivery_status = state.kafka_producer
-        .send(
-            FutureRecord::to("rust-kafka")
-                .payload("world")
-                .key("hello"),
-            Duration::from_secs(0),
-        )
-        .await;
-
-    tracing::info!("Delivery status for message {} received", delivery_status.unwrap().0);
-
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(user))
-}
-
-// the input to our `create_user` handler
-#[derive(Deserialize)]
-struct CreateUser {
-    username: String,
-}
-
-// the output to our `create_user` handler
-#[derive(Serialize)]
-struct User {
-    id: u64,
-    username: String,
+    match loyalty_points {
+        Ok(loyalty) => (StatusCode::OK, (Json(Some(loyalty)))),
+        Err(_) => (StatusCode::NOT_FOUND, Json(None)),
+    }
 }
