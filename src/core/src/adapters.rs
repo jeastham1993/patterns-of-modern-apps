@@ -1,6 +1,7 @@
 use std::env;
 
 use async_trait::async_trait;
+use chrono::DateTime;
 use sqlx::PgPool;
 use tracing::info;
 
@@ -68,11 +69,37 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
 
         match account {
             Ok(record) => match record {
-                Some(data) => Some(LoyaltyAccount {
-                    customer_id: data.customer_id.unwrap(),
-                    current_points: data.current_points.unwrap(),
-                    transactions: vec![],
-                }),
+                Some(data) => {
+                    let transactions = sqlx::query!(
+                        r#"
+                        SELECT customer_id, date_epoch, order_number, change
+                        FROM loyalty_transaction
+                        WHERE customer_id = $1
+                        "#,
+                        customer_id,
+                    )
+                    .fetch_all(&self.db)
+                    .await;
+
+                    let loyalty_transactions = match transactions {
+                        Ok(rows) => {
+                            rows.iter().map(|row| {
+                                LoyaltyAccountTransaction{
+                                    change: row.change.unwrap(),
+                                    order_number: row.order_number.clone().unwrap(),
+                                    date: DateTime::from_timestamp_millis(row.date_epoch.unwrap()).unwrap()
+                                }
+                            }).collect()
+                        },
+                        Err(_) => vec![],
+                    };
+
+                    Some(LoyaltyAccount {
+                        customer_id: data.customer_id.unwrap(),
+                        current_points: data.current_points.unwrap(),
+                        transactions: loyalty_transactions,
+                    })
+                },
                 None => None,
             },
             Err(_) => None,

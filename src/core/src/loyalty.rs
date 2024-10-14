@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use tracing::info;
 
 #[derive(Serialize)]
 pub struct LoyaltyDto {
@@ -30,7 +31,15 @@ impl LoyaltyAccount {
         &mut self,
         order_number: String,
         order_value: f32,
-    ) -> LoyaltyAccountTransaction {
+    ) -> Option<LoyaltyAccountTransaction> {
+
+        let existing_transactions: Vec<&LoyaltyAccountTransaction> = self.transactions.iter().filter(|t| t.order_number == order_number).collect();
+
+        if existing_transactions.len() > 0 {
+            info!("Transaction already exists for order {}", order_number);
+            return None;
+        }
+
         let points = order_value * 0.5;
         self.current_points += points;
 
@@ -42,7 +51,7 @@ impl LoyaltyAccount {
 
         self.transactions.push(transaction.clone());
 
-        transaction
+        Some(transaction)
     }
 }
 

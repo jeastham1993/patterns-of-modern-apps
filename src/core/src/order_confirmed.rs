@@ -20,10 +20,7 @@ impl<T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
     }
 
     pub async fn handle(&self, evt: OrderConfirmed) -> Result<(), ()> {
-        info!(
-            "Processing message for customer {} with id {} and value {}",
-            evt.customer_id, evt.order_id, evt.order_value
-        );
+        info!("Processing message for customer {} with id {} and value {}",evt.customer_id, evt.order_id, evt.order_value);
 
         let existing_account = self.loyalty_points.retrieve(&evt.customer_id).await;
 
@@ -42,14 +39,18 @@ impl<T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
 
         let transaction = account.add_transaction(evt.order_id, evt.order_value);
 
-        let update_res = self
-            .loyalty_points
-            .add_transaction(account, transaction)
-            .await;
+        if transaction.is_some() {
+            let update_res = self
+                .loyalty_points
+                .add_transaction(account, transaction.unwrap())
+                .await;
 
-        match update_res {
-            Ok(_) => Ok(()),
-            Err(_) => Err(()),
+            return match update_res {
+                Ok(_) => Ok(()),
+                Err(_) => Err(()),
+            }
         }
+
+        Ok(())
     }
 }
