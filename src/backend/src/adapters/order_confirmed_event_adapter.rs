@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use loyalty_core::{ApplicationAdpaters, OrderConfirmedEventHandler};
+use loyalty_core::ApplicationAdpaters;
 use rdkafka::{
     consumer::{CommitMode, Consumer},
     Message,

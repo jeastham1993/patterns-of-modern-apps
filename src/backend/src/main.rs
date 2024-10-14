@@ -1,8 +1,8 @@
 use adapters::{
-    order_confirmed_event_adapter::{self, OrderConfirmedEventAdapter},
+    order_confirmed_event_adapter::OrderConfirmedEventAdapter,
     KafkaConnection,
 };
-use loyalty_core::{ApplicationAdpaters, OrderConfirmedEventHandler};
+use loyalty_core::ApplicationAdpaters;
 use ports::OrderConfirmedEventReceiver;
 use tokio::signal;
 use tracing::info;

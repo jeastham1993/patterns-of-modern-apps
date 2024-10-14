@@ -31,14 +31,14 @@ pub struct PostgresLoyaltyPoints {
 
 #[async_trait]
 impl LoyaltyPoints for PostgresLoyaltyPoints {
-    async fn new(&self, customer_id: String) -> LoyaltyAccount {
+    async fn new_account(&self, customer_id: String) -> LoyaltyAccount {
         let account = LoyaltyAccount {
-            customer_id: customer_id,
+            customer_id,
             current_points: 0.0,
             transactions: vec![],
         };
 
-        let rec = sqlx::query!(
+        let _rec = sqlx::query!(
             r#"
     INSERT INTO loyalty ( customer_id, current_points )
     VALUES ( $1, $2 )

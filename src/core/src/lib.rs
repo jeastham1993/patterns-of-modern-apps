@@ -1,3 +1,4 @@
+#![allow(private_bounds)]
 mod adapters;
 mod loyalty;
 mod order_confirmed;

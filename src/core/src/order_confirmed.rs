@@ -36,7 +36,7 @@ impl<T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
             None => {
                 info!("Created new loyalty account");
 
-                self.loyalty_points.new(evt.customer_id).await
+                self.loyalty_points.new_account(evt.customer_id).await
             }
         };
 

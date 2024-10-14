@@ -26,24 +26,17 @@ pub(crate) struct LoyaltyAccount {
 }
 
 impl LoyaltyAccount {
-    pub(crate) fn from(dto: LoyaltyDto) -> Self {
-        Self {
-            customer_id: dto.customer_id,
-            current_points: dto.current_points,
-            transactions: dto.transactions,
-        }
-    }
     pub(crate) fn add_transaction(
         &mut self,
         order_number: String,
         order_value: f32,
     ) -> LoyaltyAccountTransaction {
         let points = order_value * 0.5;
-        self.current_points = self.current_points + points;
+        self.current_points += points;
 
         let transaction = LoyaltyAccountTransaction {
             date: Utc::now(),
-            order_number: order_number,
+            order_number,
             change: points,
         };
 
@@ -62,7 +55,7 @@ pub struct LoyaltyAccountTransaction {
 
 #[async_trait]
 pub(crate) trait LoyaltyPoints {
-    async fn new(&self, customer_id: String) -> LoyaltyAccount;
+    async fn new_account(&self, customer_id: String) -> LoyaltyAccount;
     async fn retrieve(&self, customer_id: &str) -> Option<LoyaltyAccount>;
     async fn add_transaction(
         &self,
