@@ -1,10 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-  "src/backend",
   "src/web",
   "src/core",
-  "src/simulator",
 ]
 
 [workspace.dependencies]

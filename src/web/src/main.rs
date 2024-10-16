@@ -27,8 +27,7 @@ async fn main() {
         .route("/loyalty/:customer_id", get(get_loyalty_points))
         .with_state(shared_state);
 
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 

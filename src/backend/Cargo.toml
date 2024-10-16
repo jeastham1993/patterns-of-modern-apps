@@ -17,4 +17,4 @@ chrono = "0.4.38"
 
 [dependencies.rdkafka]
 version     = "~0.36"
-features    = ["ssl", "sasl"]
+features    = ["ssl-vendored", "gssapi-vendored"]

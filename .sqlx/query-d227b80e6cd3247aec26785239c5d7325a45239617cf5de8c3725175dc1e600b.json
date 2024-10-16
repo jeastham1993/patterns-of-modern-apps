@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                        SELECT customer_id, date_epoch, order_number, change\n                        FROM loyalty_transaction\n                        WHERE customer_id = $1\n                        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "customer_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "date_epoch",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "order_number",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "change",
+        "type_info": "Float4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "d227b80e6cd3247aec26785239c5d7325a45239617cf5de8c3725175dc1e600b"
+}

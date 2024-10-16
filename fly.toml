@@ -1,0 +1,14 @@
+# fly.toml file generated for holy-grass-8371 on 2021-04-06T14:31:33-04:00
+
+app = "loyalty-web"
+
+kill_signal = "SIGINT"
+kill_timeout = 5
+
+[[services]]
+internal_port = 8080
+protocol = "tcp"
+
+[[services.ports]]
+handlers = ["tls", "http"]
+port = "443"
