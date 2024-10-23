@@ -22,3 +22,4 @@ Cargo.lock
 
 .aws-sam/*
 samconfig.toml
+.env

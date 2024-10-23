@@ -8,3 +8,4 @@ fly-web.toml
 README.md
 samconfig.toml
 template.yaml
+.env

@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} rust:alpine as builder
+FROM rust:alpine as builder
 
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN apk add pkgconfig openssl-dev libc-dev musl-dev bash alpine-sdk
