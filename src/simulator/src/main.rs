@@ -53,13 +53,6 @@ async fn main() {
 
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", std::env::var("BROKER").unwrap())
-        .set("security.protocol", "SASL_SSL")
-        .set("sasl.mechanisms", "PLAIN")
-        .set("sasl.username", "S3DY2DBTLR4ICJ42")
-        .set(
-            "sasl.password",
-            "vgQU7OkJPJFxdqVykhYWcwz/HpixvQ16pWUdqJcnb8vmwedPN5vYQ+u1xcJrysKH",
-        )
         .set("message.timeout.ms", "5000")
         .create()
         .expect("Producer creation error");

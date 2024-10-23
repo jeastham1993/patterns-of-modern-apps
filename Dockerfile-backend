@@ -1,34 +1,10 @@
-# FROM clux/muslrust AS builder
+FROM --platform=${BUILDPLATFORM} rust:alpine as builder
 
-# RUN ln -s /bin/g++ /bin/musl-g++
-# RUN apt-get update && apt-get install -y build-essential \
-#     curl \
-#     openssl libssl-dev \
-#     libsasl2-2 libsasl2-dev libsasl2-modules \
-#     ca-certificates \
-#     pkg-config \
-#     valgrind \
-#     zlib1g-dev
-
-# COPY . .
-
-# RUN cargo build --release --package loyalty-backend \
-#     && strip --strip-debug target/*/release/loyalty-backend \
-#     && cp target/*/release/loyalty-backend /usr/local/bin/
-
-# ENTRYPOINT ["/usr/local/bin/loyalty-backend"]
-
-# # FROM alpine AS final
-# # RUN apk --no-cache add ca-certificates \
-# #   && update-ca-certificates
-# # COPY --from=builder /usr/local/bin/loyalty-backend /usr/local/bin
-# # ENTRYPOINT ["/usr/local/bin/loyalty-backend"]
-
-FROM rust:alpine as builder
-
-RUN apk add pkgconfig openssl-dev libc-dev musl-dev bash
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+RUN apk add pkgconfig openssl-dev libc-dev musl-dev bash alpine-sdk
 COPY . .
 COPY Cargo.toml Cargo.toml
+
 RUN cargo build --release --package loyalty-backend
 RUN strip target/release/loyalty-backend
 
