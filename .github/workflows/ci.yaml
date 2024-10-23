@@ -26,3 +26,4 @@ jobs:
           file: Dockerfile-web
           push: true
           tags: plantpowerjames/modern-apps-loyalty-web:latest
+          platforms: linux/amd64,linux/arm64

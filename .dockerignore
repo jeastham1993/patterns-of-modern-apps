@@ -1,5 +1,5 @@
 **/target/*
-Dockerfile
+Dockerfile-web
 Dockerfile-backend
 docker-compose.yml
 docker-compose-all.yml

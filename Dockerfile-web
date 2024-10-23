@@ -1,36 +1,17 @@
-# FROM clux/muslrust
-
-# RUN ln -s /bin/g++ /bin/musl-g++
-# RUN apt-get update && apt-get install -y build-essential \
-#     curl \
-#     openssl libssl-dev \
-#     libsasl2-2 libsasl2-dev libsasl2-modules \
-#     ca-certificates \
-#     pkg-config \
-#     valgrind \
-#     zlib1g-dev
-
-# COPY . .
-
-# RUN cargo build --release --package loyalty-web
-
-# CMD ["target/x86_64-unknown-linux-musl/release/loyalty-web"]
-
 FROM rust:alpine as builder
 
-RUN USER=root
-
-RUN apk add pkgconfig openssl-dev libc-dev
+RUN apk add pkgconfig openssl-dev libc-dev musl-dev
 COPY . .
 COPY Cargo.toml Cargo.toml
 RUN cargo build --release --package loyalty-web
+RUN strip target/release/loyalty-web
 
 FROM alpine:latest
 RUN apk update \
-    && apk add openssl ca-certificates
+    && apk add openssl ca-certificates libgcc
 
 EXPOSE 8080
 
-COPY --from=builder /target/release/loyalty-web /app/loyalty-web 
+COPY --from=builder /target/release/loyalty-web .
 
-CMD ["/app/loyalty-web "]
+ENTRYPOINT ["/loyalty-web"]
