@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters: 
+  ServiceName: 
+    Type: String
+    Default: RustLoyalty
+  Env: 
+    Type: String
+    Default: dev
+  CommitHash:
+    Type: String
+    Default: latest
+  DDApiKeySecretArn:
+    Type: String
+  DDSite:
+    Type: String
+  DatabaseUrl:
+    Type: String
+  ConfluentCloudCredentials:
+    Type: String
+  KafkaBoostrapServers:
+    Type: String
+
+Globals:
+  Function:
+    MemorySize: 256
+    Handler: bootstrap
+    Runtime: provided.al2023
+    CodeUri: .
+    Architectures:
+      - arm64
+    Environment:
+      Variables:
+        DATABASE_URL: !Ref DatabaseUrl
+        ENV: !Ref Env
+        DD_ENV: !Ref Env
+        DD_API_KEY_SECRET_ARN: !Ref DDApiKeySecretArn
+        DD_SITE: !Ref DDSite
+        DD_VERSION: !Ref CommitHash
+        DD_EXTENSION_VERSION: "next"
+        DD_SERVICE: !Ref ServiceName
+        RUST_LOG: "info"
+
+Resources:
+  LoyaltyBackend:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: rust-cargolambda
+      BuildProperties:
+        Binary: loyalty-backend
+    Properties:
+      FunctionName: loyalty-backend
+      Timeout: 60
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:464622532012:layer:Datadog-Extension-ARM:65
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref ConfluentCloudCredentialsArn
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DDApiKeySecretArn
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt OrderCompletedKafkaDLQ.QueueName
+      Events:
+        KafkaOrderCompletedEvent:
+          Type: SelfManagedKafka
+          Properties:
+            BatchSize: 10
+            Enabled: true
+            ConsumerGroupId: loyalty-lambda
+            DestinationConfig:
+              OnFailure:
+                Destination: !GetAtt OrderCompletedKafkaDLQ.Arn
+            KafkaBootstrapServers:
+              - !Ref KafkaBoostrapServers
+            SourceAccessConfigurations: 
+              - Type: BASIC_AUTH
+                URI: !Ref ConfluentCloudCredentialsArn
+            Topics:
+              - order-completed
+
+  LoyaltyApi:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: rust-cargolambda
+      BuildProperties:
+        Binary: loyalty-web
+    Properties:
+      FunctionName: loyalty-web
+      Timeout: 3
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DDApiKeySecretArn
+      FunctionUrlConfig:
+        AuthType:  NONE
+        InvokeMode: BUFFERED
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:23
+        - !Sub arn:aws:lambda:${AWS::Region}:464622532012:layer:Datadog-Extension-ARM:65
+
+  OrderCompletedKafkaDLQ:
+      Type: AWS::SQS::Queue
