@@ -32,8 +32,6 @@ async fn process(producer: FutureProducer, topic: &str) {
 
         let serialized = serde_json::to_string(&data).unwrap();
 
-        // The send operation on the topic returns a future, which will be
-        // completed once the result or failure from Kafka is received.
         let _ = producer
             .send(
                 FutureRecord::to(topic)
@@ -51,11 +49,27 @@ async fn process(producer: FutureProducer, topic: &str) {
 async fn main() {
     tracing_subscriber::fmt().init();
 
-    let producer: FutureProducer = ClientConfig::new()
-        .set("bootstrap.servers", std::env::var("BROKER").unwrap())
-        .set("message.timeout.ms", "5000")
-        .create()
-        .expect("Producer creation error");
+    let username = std::env::var("KAFKA_USERNAME");
+    let password = std::env::var("KAFKA_PASSWORD");
+    let broker = std::env::var("BROKER").expect("Broker should be set");
+
+    let producer: FutureProducer = match username {
+        Ok(username) => {
+            info!("Publishing to {}", &broker);
+            ClientConfig::new()
+            .set("bootstrap.servers", broker)
+            .set("security.protocol", "SASL_SSL")
+            .set("sasl.mechanisms", "PLAIN")
+            .set("sasl.username", username)
+            .set("sasl.password", password.expect("Password should be set if user is"))
+            .create()
+            .expect("Producer creation failed")
+        },
+        Err(_) => ClientConfig::new()
+            .set("bootstrap.servers", broker)
+            .create()
+            .expect("Producer creation failed"),
+    };
 
     tokio::spawn(async move {
         process(producer, "order-completed").await;
@@ -67,7 +81,6 @@ async fn main() {
         }
         Err(err) => {
             eprintln!("Unable to listen for shutdown signal: {}", err);
-            // we also shut down in case of error
         }
     }
 

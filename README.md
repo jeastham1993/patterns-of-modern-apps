@@ -12,4 +12,8 @@ fly deploy
 
 ```sh
 fly secrets set -a loyalty-web DATABASE_URL=""
+fly secrets set -a loyalty-backend DATABASE_URL=""
+fly secrets set -a loyalty-backend BROKER=""
+fly secrets set -a loyalty-backend KAFKA_USERNAME=""
+fly secrets set -a loyalty-backend KAFKA_PASSWORD=""
 ```
