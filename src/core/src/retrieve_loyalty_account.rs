@@ -9,6 +9,7 @@ impl<T: LoyaltyPoints> RetrieveLoyaltyAccountQueryHandler<T> {
         Self { loyalty_points }
     }
 
+    #[tracing::instrument(name = "handle_retrieve_loyalty_account", skip(self))]
     pub async fn handle(&self, customer_id: String) -> Result<LoyaltyDto, ()> {
         let loyalty_points = self.loyalty_points.retrieve(&customer_id).await;
 

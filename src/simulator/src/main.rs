@@ -1,10 +1,10 @@
-use std::time::Duration;
-
+use rand::Rng;
 use rdkafka::{
     producer::{FutureProducer, FutureRecord},
     ClientConfig,
 };
 use serde::Serialize;
+use std::time::Duration;
 use tokio::signal;
 use tracing::info;
 
@@ -19,10 +19,15 @@ async fn process(producer: FutureProducer, topic: &str) {
     loop {
         info!("Producing");
 
+        let order_num = rand::thread_rng().gen_range(0..100);
+
+        let order_value_int = rand::thread_rng().gen_range(0..10000);
+        let order_value: f32 = order_value_int as f32;
+
         let data = OrderConfirmed {
             customer_id: "james".to_string(),
-            order_id: "ORD123".to_string(),
-            order_value: 15.0
+            order_id: format!("ORD{}", order_num),
+            order_value: order_value / 100.00,
         };
 
         let serialized = serde_json::to_string(&data).unwrap();
@@ -48,6 +53,13 @@ async fn main() {
 
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", std::env::var("BROKER").unwrap())
+        .set("security.protocol", "SASL_SSL")
+        .set("sasl.mechanisms", "PLAIN")
+        .set("sasl.username", "S3DY2DBTLR4ICJ42")
+        .set(
+            "sasl.password",
+            "vgQU7OkJPJFxdqVykhYWcwz/HpixvQ16pWUdqJcnb8vmwedPN5vYQ+u1xcJrysKH",
+        )
         .set("message.timeout.ms", "5000")
         .create()
         .expect("Producer creation error");

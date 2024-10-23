@@ -6,22 +6,30 @@ use sqlx::PgPool;
 use tracing::info;
 
 use crate::{
-    loyalty::{LoyaltyAccount, LoyaltyPoints}, LoyaltyAccountTransaction, OrderConfirmedEventHandler, RetrieveLoyaltyAccountQueryHandler
+    loyalty::{LoyaltyAccount, LoyaltyPoints},
+    LoyaltyAccountTransaction, OrderConfirmedEventHandler, RetrieveLoyaltyAccountQueryHandler,
 };
 
 pub struct ApplicationAdpaters {
     pub order_confirmed_handler: OrderConfirmedEventHandler<PostgresLoyaltyPoints>,
-    pub retrieve_loyalty_query_handler: RetrieveLoyaltyAccountQueryHandler<PostgresLoyaltyPoints>
+    pub retrieve_loyalty_query_handler: RetrieveLoyaltyAccountQueryHandler<PostgresLoyaltyPoints>,
 }
 
 impl ApplicationAdpaters {
+    #[tracing::instrument(name = "new_application_adapters")]
     pub async fn new() -> Self {
         let database_pool = PgPool::connect(&env::var("DATABASE_URL").unwrap())
             .await
             .unwrap();
         Self {
-            order_confirmed_handler: OrderConfirmedEventHandler::new(PostgresLoyaltyPoints { db: database_pool.clone() }).await,
-            retrieve_loyalty_query_handler: RetrieveLoyaltyAccountQueryHandler::new(PostgresLoyaltyPoints { db: database_pool }).await
+            order_confirmed_handler: OrderConfirmedEventHandler::new(PostgresLoyaltyPoints {
+                db: database_pool.clone(),
+            })
+            .await,
+            retrieve_loyalty_query_handler: RetrieveLoyaltyAccountQueryHandler::new(
+                PostgresLoyaltyPoints { db: database_pool },
+            )
+            .await,
         }
     }
 }
@@ -32,6 +40,7 @@ pub struct PostgresLoyaltyPoints {
 
 #[async_trait]
 impl LoyaltyPoints for PostgresLoyaltyPoints {
+    #[tracing::instrument(name = "db_new_account", skip(self))]
     async fn new_account(&self, customer_id: String) -> LoyaltyAccount {
         let account = LoyaltyAccount {
             customer_id,
@@ -53,6 +62,7 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
         account
     }
 
+    #[tracing::instrument(name = "db_retrieve", skip(self))]
     async fn retrieve(&self, customer_id: &str) -> Option<LoyaltyAccount> {
         info!("Searching for customer data {}", customer_id);
 
@@ -82,15 +92,15 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
                     .await;
 
                     let loyalty_transactions = match transactions {
-                        Ok(rows) => {
-                            rows.iter().map(|row| {
-                                LoyaltyAccountTransaction{
-                                    change: row.change.unwrap(),
-                                    order_number: row.order_number.clone().unwrap(),
-                                    date: DateTime::from_timestamp_millis(row.date_epoch.unwrap()).unwrap()
-                                }
-                            }).collect()
-                        },
+                        Ok(rows) => rows
+                            .iter()
+                            .map(|row| LoyaltyAccountTransaction {
+                                change: row.change.unwrap(),
+                                order_number: row.order_number.clone().unwrap(),
+                                date: DateTime::from_timestamp_millis(row.date_epoch.unwrap())
+                                    .unwrap(),
+                            })
+                            .collect(),
                         Err(_) => vec![],
                     };
 
@@ -99,13 +109,14 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
                         current_points: data.current_points.unwrap(),
                         transactions: loyalty_transactions,
                     })
-                },
+                }
                 None => None,
             },
             Err(_) => None,
         }
     }
 
+    #[tracing::instrument(name = "db_add_transaction", skip(self, account, transaction))]
     async fn add_transaction(
         &self,
         account: LoyaltyAccount,

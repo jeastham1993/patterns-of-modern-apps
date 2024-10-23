@@ -1,9 +1,10 @@
-# fly.toml file generated for holy-grass-8371 on 2021-04-06T14:31:33-04:00
-
 app = "loyalty-web"
 
 kill_signal = "SIGINT"
 kill_timeout = 5
+
+[build]
+dockerfile = "Dockerfile-web"
 
 [[services]]
 internal_port = 8080

@@ -12,3 +12,5 @@ tracing-subscriber = "0.3.8"
 tracing = "0.1.40"
 serde = { version = "1.0", features = ["derive"] }
 axum = "0.7.7"
+axum-tracing-opentelemetry = "0.21.1"
+opentelemetry = { version = "0.23", features = ["trace"] }

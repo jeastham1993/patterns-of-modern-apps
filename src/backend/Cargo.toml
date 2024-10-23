@@ -3,6 +3,11 @@ name = "loyalty-backend"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["container"]
+lambda = ["lambda_runtime", "aws_lambda_events", "base64"]
+container = ["rdkafka"]
+
 [dependencies]
 loyalty_core = { path = "../core" }
 
@@ -14,7 +19,12 @@ tracing-subscriber = {workspace = true}
 serde = { version = "1.0.210", features = ["derive"] }
 async-trait = "0.1.83"
 chrono = "0.4.38"
+lambda_runtime = {version = "0", optional = true}
+aws_lambda_events = {version = "0", optional = true}
+base64 = {version = "0.22", optional = true}
 
 [dependencies.rdkafka]
-version     = "~0.36"
-features    = ["ssl-vendored", "gssapi-vendored"]
+version     = "0.36.2"
+default-features = false
+features    = ["tokio", "ssl"]
+optional = true

@@ -1,31 +1,23 @@
 use async_trait::async_trait;
 use loyalty_core::ApplicationAdpaters;
-use rdkafka::{
-    consumer::{CommitMode, Consumer},
-    Message,
-};
-use tracing::{error, info};
+use tracing::info;
 
 use crate::ports::OrderConfirmedEventReceiver;
 
-use super::KafkaConnection;
-
-pub struct OrderConfirmedEventAdapter {
-    connection: KafkaConnection,
+pub struct LambdaOrderConfirmedEventAdapter {
     adapters: ApplicationAdpaters,
 }
 
-impl OrderConfirmedEventAdapter {
-    pub fn new(connection: KafkaConnection, adapters: ApplicationAdpaters) -> Self {
+impl LambdaOrderConfirmedEventAdapter {
+    pub fn new(adapters: ApplicationAdpaters) -> Self {
         Self {
-            connection,
             adapters
         }
     }
 }
 
 #[async_trait]
-impl OrderConfirmedEventReceiver for OrderConfirmedEventAdapter {
+impl OrderConfirmedEventReceiver for LambdaOrderConfirmedEventAdapter {
     async fn process(&self) {
         info!("Wait for receive");
 

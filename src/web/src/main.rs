@@ -35,7 +35,11 @@ async fn get_loyalty_points(
     State(state): State<Arc<AppState>>,
     path: Path<String>,
 ) -> (StatusCode, Json<Option<LoyaltyDto>>) {
-    let loyalty_points = state.application.retrieve_loyalty_query_handler.handle(path.0).await;
+    let loyalty_points = state
+        .application
+        .retrieve_loyalty_query_handler
+        .handle(path.0)
+        .await;
 
     match loyalty_points {
         Ok(loyalty) => (StatusCode::OK, (Json(Some(loyalty)))),

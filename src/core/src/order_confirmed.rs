@@ -19,6 +19,7 @@ impl<T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
         Self { loyalty_points }
     }
 
+    #[tracing::instrument(name = "handle_order_confirmed",skip(self, evt), fields(customer_id=evt.customer_id, order_id=evt.order_id, order_value=evt.order_value))]
     pub async fn handle(&self, evt: OrderConfirmed) -> Result<(), ()> {
         info!("Processing message for customer {} with id {} and value {}",evt.customer_id, evt.order_id, evt.order_value);
 

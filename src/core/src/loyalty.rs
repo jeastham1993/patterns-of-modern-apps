@@ -27,6 +27,7 @@ pub(crate) struct LoyaltyAccount {
 }
 
 impl LoyaltyAccount {
+    #[tracing::instrument(name = "handle_add_transaction",skip(self))]
     pub(crate) fn add_transaction(
         &mut self,
         order_number: String,
