@@ -1,5 +1,19 @@
 # Patterns of Modern App Development
 
+## Deploy ECS Fargate
+
+```sh
+cd ecs-fargate
+cdk deploy
+```
+
+## Deploy Lambda
+
+```sh
+sam build
+sam deploy --guided
+```
+
 ## Deploy Fly.IO
 
 ```sh
@@ -8,7 +22,7 @@ fly app create --name loyalty-backend
 fly deploy
 ```
 
-## Secrets
+### Secrets
 
 ```sh
 fly secrets set -a loyalty-web DATABASE_URL=""
