@@ -19,13 +19,17 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Declare some variables
+        shell: bash
+        run: |
+          echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
       -
         name: Build and push web
         uses: docker/build-push-action@v6
         with:
           file: Dockerfile-web
           push: true
-          tags: plantpowerjames/modern-apps-loyalty-web:latest
+          tags: plantpowerjames/modern-apps-loyalty-web:${env.sha_short}
           platforms: linux/amd64
       -
         name: Build and push backend
@@ -33,5 +37,5 @@ jobs:
         with:
           file: Dockerfile-backend
           push: true
-          tags: plantpowerjames/modern-apps-loyalty-backend:latest
+          tags: plantpowerjames/modern-apps-loyalty-backend:${env.sha_short}
           platforms: linux/amd64
