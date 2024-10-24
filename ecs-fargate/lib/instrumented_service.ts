@@ -58,6 +58,7 @@ export class InstrumentedService extends Construct {
     var baseEnvironmentVariables: {
       [key: string]: string;
     } = {
+      OTLP_ENDPOINT: "http://127.0.0.1:4317",
       Environment: props.environment,
       ECS_ENABLE_CONTAINER_METADATA: "true",
       ENV: props.environment,
@@ -67,7 +68,7 @@ export class InstrumentedService extends Construct {
       DD_VERSION: props.version,
       DD_IAST_ENABLED: "true",
       RUST_LOG: "info",
-      ...props.envVariables
+      ...props.envVariables,
     };
 
     var taskDefinition = new FargateTaskDefinition(
@@ -112,6 +113,9 @@ export class InstrumentedService extends Construct {
       image: ContainerImage.fromRegistry("public.ecr.aws/datadog/agent:latest"),
       portMappings: [
         {
+          containerPort: 4317,
+        },
+        {
           containerPort: 5000,
         },
         {
@@ -128,6 +132,7 @@ export class InstrumentedService extends Construct {
       environment: {
         DD_SITE: "datadoghq.eu",
         ECS_FARGATE: "true",
+        DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT: "0.0.0.0:4317",
         DD_LOGS_ENABLED: "false",
         DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true",
         DD_APM_ENABLED: "true",
