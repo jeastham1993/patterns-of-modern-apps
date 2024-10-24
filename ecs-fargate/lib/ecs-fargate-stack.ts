@@ -4,6 +4,7 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import { InstrumentedService } from "./instrumented_service";
 import { WebService } from "./web_service";
+import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
 export class EcsFargateStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -16,6 +17,27 @@ export class EcsFargateStack extends cdk.Stack {
     const cluster = new ecs.Cluster(this, "LoyaltyCluster", {
       vpc: vpc,
     });
+
+    const databaseUrlParam = StringParameter.fromStringParameterName(
+      this,
+      "DatabaseUrl",
+      "/ModernApps/DatabaseUrl"
+    );
+    const kafkaBroker = StringParameter.fromStringParameterName(
+      this,
+      "KafkaBroker",
+      "/ModernApps/KafkaBroker"
+    );
+    const kafkaUsername = StringParameter.fromStringParameterName(
+      this,
+      "KafkaUsername",
+      "/ModernApps/KafkaUsername"
+    );
+    const kafkaPassword = StringParameter.fromStringParameterName(
+      this,
+      "KafkaPassword",
+      "/ModernApps/KafkaPassword"
+    );
 
     const webService = new WebService(this, "LoyaltyWeb", {
       instrumentService: {
@@ -33,11 +55,14 @@ export class EcsFargateStack extends cdk.Stack {
             protocol: ecs.Protocol.TCP,
           },
         ],
-        envVariables: {
-          DATABASE_URL: process.env.DATABASE_URL!,
+        envVariables: {},
+        secretVariables: {
+          DATABASE_URL: ecs.Secret.fromSsmParameter(databaseUrlParam),
         },
       },
     });
+
+    databaseUrlParam.grantRead(webService.service.executionRole);
 
     const backendService = new InstrumentedService(this, "LoyaltyBackend", {
       image: ecs.ContainerImage.fromRegistry(
@@ -50,12 +75,19 @@ export class EcsFargateStack extends cdk.Stack {
       vpc: vpc,
       portMappings: undefined,
       envVariables: {
-        DATABASE_URL: process.env.DATABASE_URL!,
-        BROKER: process.env.BROKER!,
         GROUP_ID: "loyalty-fargate",
-        KAFKA_USERNAME: process.env.KAFKA_USERNAME!,
-        KAFKA_PASSWORD: process.env.KAFKA_PASSWORD!,
+      },
+      secretVariables: {
+        DATABASE_URL: ecs.Secret.fromSsmParameter(databaseUrlParam),
+        BROKER: ecs.Secret.fromSsmParameter(kafkaBroker),
+        KAFKA_USERNAME: ecs.Secret.fromSsmParameter(kafkaUsername),
+        KAFKA_PASSWORD: ecs.Secret.fromSsmParameter(kafkaPassword),
       },
     });
+
+    databaseUrlParam.grantRead(webService.service.executionRole);
+    kafkaBroker.grantRead(webService.service.executionRole);
+    kafkaUsername.grantRead(webService.service.executionRole);
+    kafkaPassword.grantRead(webService.service.executionRole);
   }
 }

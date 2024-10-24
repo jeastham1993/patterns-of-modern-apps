@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { IRole, ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import {
   ContainerImage,
@@ -26,10 +26,14 @@ export interface InstrumentedServiceProps {
   envVariables: {
     [key: string]: string;
   };
+  secretVariables: {
+    [key: string]: Secret;
+  };
 }
 
 export class InstrumentedService extends Construct {
   service: FargateService;
+  executionRole: IRole;
 
   constructor(scope: Construct, id: string, props: InstrumentedServiceProps) {
     super(scope, id);
@@ -40,10 +44,10 @@ export class InstrumentedService extends Construct {
       "DDApiKey"
     );
 
-    var executionRole = new Role(this, `${props.serviceName}ExecutionRole`, {
+    this.executionRole = new Role(this, `${props.serviceName}ExecutionRole`, {
       assumedBy: new ServicePrincipal("ecs-tasks.amazonaws.com"),
     });
-    executionRole.addManagedPolicy(
+    this.executionRole.addManagedPolicy(
       ManagedPolicy.fromManagedPolicyArn(
         this,
         "TaskExecutionPolicy",
@@ -80,7 +84,7 @@ export class InstrumentedService extends Construct {
           cpuArchitecture: CpuArchitecture.X86_64,
           operatingSystemFamily: OperatingSystemFamily.LINUX,
         },
-        executionRole: executionRole,
+        executionRole: this.executionRole,
         taskRole: taskRole,
       }
     );
@@ -102,6 +106,7 @@ export class InstrumentedService extends Construct {
         },
         secretOptions: {
           apikey: Secret.fromSsmParameter(ddApiKeyParam),
+          ...props.secretVariables
         },
       }),
     });
@@ -165,6 +170,6 @@ export class InstrumentedService extends Construct {
       assignPublicIp: true,
     });
 
-    ddApiKeyParam.grantRead(executionRole);
+    ddApiKeyParam.grantRead(this.executionRole);
   }
 }

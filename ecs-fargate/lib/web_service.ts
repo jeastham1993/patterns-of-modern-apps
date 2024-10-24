@@ -16,10 +16,11 @@ export interface WebServiceProps {
 }
 
 export class WebService extends Construct {
+  service: InstrumentedService;
   constructor(scope: Construct, id: string, props: WebServiceProps) {
     super(scope, id);
 
-    var instrumentedService = new InstrumentedService(
+    this.service = new InstrumentedService(
       this,
       id,
       props.instrumentService
@@ -30,7 +31,7 @@ export class WebService extends Construct {
       `${props.instrumentService.serviceName}TargetGroup`,
       {
         port: 8080,
-        targets: [instrumentedService.service],
+        targets: [this.service.service],
         healthCheck: {
           port: "8080",
           path: "/",
@@ -44,7 +45,6 @@ export class WebService extends Construct {
       this,
       `${props.instrumentService.serviceName}ApplicationIngressWithListener`,
       {
-        loadBalancerName: `${props.instrumentService.serviceName}ALB`,
         vpc: props.instrumentService.vpc,
         internetFacing: true,
       }

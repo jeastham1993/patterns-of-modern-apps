@@ -6,7 +6,7 @@ use sqlx::PgPool;
 use tracing::info;
 
 use crate::{
-    loyalty::{LoyaltyAccount, LoyaltyPoints},
+    loyalty::{LoyaltyAccount, LoyaltyErrors, LoyaltyPoints},
     LoyaltyAccountTransaction, OrderConfirmedEventHandler, RetrieveLoyaltyAccountQueryHandler,
 };
 
@@ -41,29 +41,28 @@ pub struct PostgresLoyaltyPoints {
 #[async_trait]
 impl LoyaltyPoints for PostgresLoyaltyPoints {
     #[tracing::instrument(name = "db_new_account", skip(self))]
-    async fn new_account(&self, customer_id: String) -> LoyaltyAccount {
-        let account = LoyaltyAccount {
-            customer_id,
-            current_points: 0.0,
-            transactions: vec![],
-        };
+    async fn new_account(
+        &self,
+        customer_id: String,
+    ) -> anyhow::Result<LoyaltyAccount, LoyaltyErrors> {
+        let account = LoyaltyAccount::new(customer_id)?;
 
         let _rec = sqlx::query!(
             r#"
     INSERT INTO loyalty ( customer_id, current_points )
     VALUES ( $1, $2 )
             "#,
-            account.customer_id,
-            account.current_points
+            account.customer_id(),
+            account.current_points()
         )
         .fetch_one(&self.db)
         .await;
 
-        account
+        Ok(account)
     }
 
     #[tracing::instrument(name = "db_retrieve", skip(self))]
-    async fn retrieve(&self, customer_id: &str) -> Option<LoyaltyAccount> {
+    async fn retrieve(&self, customer_id: &str) -> anyhow::Result<LoyaltyAccount, LoyaltyErrors> {
         info!("Searching for customer data {}", customer_id);
 
         let account = sqlx::query!(
@@ -104,15 +103,20 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
                         Err(_) => vec![],
                     };
 
-                    Some(LoyaltyAccount {
-                        customer_id: data.customer_id.unwrap(),
-                        current_points: data.current_points.unwrap(),
-                        transactions: loyalty_transactions,
-                    })
+                    let found_account = LoyaltyAccount::from(
+                        data.customer_id.unwrap(),
+                        data.current_points.unwrap(),
+                        loyalty_transactions,
+                    )?;
+
+                    Ok(found_account)
                 }
-                None => None,
+                None => Err(LoyaltyErrors::AccountNotFound()),
             },
-            Err(_) => None,
+            Err(e) => Err(LoyaltyErrors::DatabaseError(format!(
+                "Database Error: {:?}",
+                e
+            ))),
         }
     }
 
@@ -121,7 +125,7 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
         &self,
         account: LoyaltyAccount,
         transaction: LoyaltyAccountTransaction,
-    ) -> Result<(), ()> {
+    ) -> anyhow::Result<(), LoyaltyErrors> {
         info!("Opening DB transaction");
 
         let db_transaction = self.db.begin().await.unwrap();
@@ -131,7 +135,7 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
     INSERT INTO loyalty_transaction ( customer_id, date_epoch, order_number, change )
     VALUES ( $1, $2, $3, $4 )
             "#,
-            account.customer_id,
+            account.customer_id(),
             transaction.date.timestamp_millis(),
             transaction.order_number,
             transaction.change
@@ -142,7 +146,9 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
         if insert_res.is_err() {
             tracing::error!("Failure inserting transaction: {:?}", insert_res.err());
             let _ = db_transaction.rollback().await;
-            return Err(());
+            return Err(LoyaltyErrors::DatabaseError(
+                "Failure inserting transaction".to_string(),
+            ));
         }
 
         info!("Inserted transaction");
@@ -153,15 +159,17 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
     SET current_points = $1
     WHERE customer_id = $2
             "#,
-            account.current_points,
-            account.customer_id
+            account.current_points(),
+            account.customer_id()
         )
         .execute(&self.db)
         .await;
 
         if update_res.is_err() {
             let _ = db_transaction.rollback().await;
-            return Err(());
+            return Err(LoyaltyErrors::DatabaseError(
+                "Failure updating account".to_string(),
+            ));
         }
 
         info!("Updated account");

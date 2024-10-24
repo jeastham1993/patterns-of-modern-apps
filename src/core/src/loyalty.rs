@@ -1,7 +1,22 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use thiserror::Error;
 use tracing::info;
+
+#[derive(Error, Debug)]
+pub enum LoyaltyErrors {
+    #[error("Invalid Values")]
+    InvalidValues(String),
+    #[error("Loyalty Account Not Found")]
+    AccountNotFound(),
+    #[error("Transaction Exists for Order")]
+    TransactionExistsForOrder(String),
+    #[error("Points Not Available")]
+    PointsNotAvailable(String),
+    #[error("Database Error")]
+    DatabaseError(String),
+}
 
 #[derive(Serialize)]
 pub struct LoyaltyDto {
@@ -21,27 +36,76 @@ impl From<LoyaltyAccount> for LoyaltyDto {
 }
 
 pub(crate) struct LoyaltyAccount {
-    pub(crate) customer_id: String,
-    pub(crate) current_points: f32,
-    pub(crate) transactions: Vec<LoyaltyAccountTransaction>,
+    customer_id: String,
+    current_points: f32,
+    transactions: Vec<LoyaltyAccountTransaction>,
 }
 
 impl LoyaltyAccount {
-    #[tracing::instrument(name = "handle_add_transaction",skip(self))]
+    const LOYALTY_ACCOUNT_PERCENTAGE: f32 = 0.5;
+
+    pub fn customer_id(&self) -> &str {
+        &self.customer_id
+    }
+
+    pub fn current_points(&self) -> &f32 {
+        &self.current_points
+    }
+
+    pub fn transactions(&self) -> &Vec<LoyaltyAccountTransaction> {
+        &self.transactions
+    }
+
+    #[tracing::instrument(name = "new_loyalty_account")]
+    pub fn new(customer_id: String) -> anyhow::Result<Self, LoyaltyErrors> {
+        if customer_id.len() == 0 {
+            return Err(LoyaltyErrors::InvalidValues(
+                "CustomerID cannot be empty".to_string(),
+            ));
+        }
+
+        Ok(Self {
+            customer_id: customer_id,
+            current_points: 0.00,
+            transactions: vec![],
+        })
+    }
+
+    pub(crate) fn from(
+        customer_id: String,
+        current_points: f32,
+        transactions: Vec<LoyaltyAccountTransaction>,
+    ) -> anyhow::Result<Self, LoyaltyErrors> {
+        if customer_id.len() == 0 {
+            return Err(LoyaltyErrors::InvalidValues(
+                "CustomerID cannot be empty".to_string(),
+            ));
+        }
+        Ok(Self {
+            customer_id: customer_id,
+            current_points: current_points,
+            transactions: transactions,
+        })
+    }
+
+    #[tracing::instrument(name = "handle_add_transaction", skip(self))]
     pub(crate) fn add_transaction(
         &mut self,
         order_number: String,
         order_value: f32,
-    ) -> Option<LoyaltyAccountTransaction> {
-
-        let existing_transactions: Vec<&LoyaltyAccountTransaction> = self.transactions.iter().filter(|t| t.order_number == order_number).collect();
+    ) -> anyhow::Result<LoyaltyAccountTransaction, LoyaltyErrors> {
+        let existing_transactions: Vec<&LoyaltyAccountTransaction> = self
+            .transactions
+            .iter()
+            .filter(|t| t.order_number == order_number)
+            .collect();
 
         if existing_transactions.len() > 0 {
             info!("Transaction already exists for order {}", order_number);
-            return None;
+            return Err(LoyaltyErrors::TransactionExistsForOrder(format!("Transaction already exists for order {}", order_number)));
         }
 
-        let points = order_value * 0.5;
+        let points = order_value * Self::LOYALTY_ACCOUNT_PERCENTAGE;
         self.current_points += points;
 
         let transaction = LoyaltyAccountTransaction {
@@ -52,7 +116,43 @@ impl LoyaltyAccount {
 
         self.transactions.push(transaction.clone());
 
-        Some(transaction)
+        Ok(transaction)
+    }
+
+    pub(crate) fn spend_points(
+        &mut self,
+        order_number: String,
+        spend: f32,
+    ) -> Result<LoyaltyAccountTransaction, LoyaltyErrors> {
+        let new_points_total = self.current_points - spend;
+
+        if new_points_total < 0.0 {
+            return Err(LoyaltyErrors::PointsNotAvailable(
+                "Current points not enough to cover this transaction".to_string(),
+            ));
+        }
+
+        let existing_transactions: Vec<&LoyaltyAccountTransaction> = self
+            .transactions
+            .iter()
+            .filter(|t| t.order_number == order_number)
+            .collect();
+
+        if existing_transactions.len() > 0 {
+            return Err(LoyaltyErrors::TransactionExistsForOrder(format!("Transaction already exists for order {}", order_number)));
+        }
+
+        self.current_points = new_points_total;
+
+        let transaction = LoyaltyAccountTransaction {
+            date: Utc::now(),
+            order_number,
+            change: -spend,
+        };
+
+        self.transactions.push(transaction.clone());
+
+        Ok(transaction)
     }
 }
 
@@ -65,11 +165,98 @@ pub struct LoyaltyAccountTransaction {
 
 #[async_trait]
 pub(crate) trait LoyaltyPoints {
-    async fn new_account(&self, customer_id: String) -> LoyaltyAccount;
-    async fn retrieve(&self, customer_id: &str) -> Option<LoyaltyAccount>;
+    async fn new_account(
+        &self,
+        customer_id: String,
+    ) -> anyhow::Result<LoyaltyAccount, LoyaltyErrors>;
+    async fn retrieve(&self, customer_id: &str) -> anyhow::Result<LoyaltyAccount, LoyaltyErrors>;
     async fn add_transaction(
         &self,
         account: LoyaltyAccount,
         transaction: LoyaltyAccountTransaction,
-    ) -> Result<(), ()>;
+    ) -> anyhow::Result<(), LoyaltyErrors>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_create_loyalty_account() {
+        let test_customer_id = "test-id";
+        let account = LoyaltyAccount::new(test_customer_id.to_string()).unwrap();
+
+        assert_eq!(account.customer_id, test_customer_id);
+        assert_eq!(account.current_points, 0.00);
+        assert_eq!(account.transactions.len(), 0);
+    }
+
+    #[test]
+    fn can_create_loyalty_account_and_add_transaction() {
+        let test_customer_id = "test-id";
+        let mut account = LoyaltyAccount::new(test_customer_id.to_string()).unwrap();
+        account.add_transaction("ORD567".to_string(), 100.00);
+
+        assert_eq!(account.current_points, 50.00);
+        assert_eq!(account.transactions().len(), 1);
+    }
+
+    #[test]
+    fn can_create_loyalty_account_and_spend_points_when_points_are_available() {
+        let test_customer_id = "test-id";
+        let mut account = LoyaltyAccount::new(test_customer_id.to_string()).unwrap();
+        account.add_transaction("ORD567".to_string(), 100.00);
+
+        account.spend_points("ORD789".to_string(), 10.0);
+
+        assert_eq!(account.current_points, 40.00);
+        assert_eq!(account.transactions().len(), 2);
+    }
+
+    #[test]
+    fn can_create_loyalty_account_and_add_same_transaction_should_not_add_points() {
+        let test_customer_id = "test-id";
+        let mut account = LoyaltyAccount::new(test_customer_id.to_string()).unwrap();
+        account.add_transaction("ORD567".to_string(), 100.00);
+        account.add_transaction("ORD567".to_string(), 100.00);
+
+        assert_eq!(account.current_points, 50.00);
+        assert_eq!(account.transactions().len(), 1);
+    }
+
+    #[test]
+    fn can_create_loyalty_account_from_parts() {
+        let test_customer_id = "test-id";
+        let test_points_total = 10.0;
+        let transactions = vec![];
+
+        let account = LoyaltyAccount::from(
+            test_customer_id.to_string(),
+            test_points_total,
+            transactions.clone(),
+        )
+        .unwrap();
+
+        assert_eq!(account.customer_id, test_customer_id);
+        assert_eq!(account.current_points, test_points_total);
+        assert_eq!(account.transactions.len(), transactions.len());
+    }
+
+    #[test]
+    fn can_create_loyalty_account_from_parts_and_add_transactions() {
+        let test_customer_id = "test-id";
+        let test_points_total = 10.0;
+        let transactions = vec![];
+
+        let mut account = LoyaltyAccount::from(
+            test_customer_id.to_string(),
+            test_points_total,
+            transactions.clone(),
+        )
+        .unwrap();
+        account.add_transaction("ORD567".to_string(), 100.00);
+
+        assert_eq!(account.current_points, 60.00);
+        assert_eq!(account.transactions().len(), 1);
+    }
 }
