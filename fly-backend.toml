@@ -7,4 +7,5 @@ kill_signal = "SIGINT"
 kill_timeout = 5
 
 [env]
-  GROUP_ID = "loyalty"
+GROUP_ID = "loyalty"
+SERVICE_NAME = "loyalty-backend-fly"

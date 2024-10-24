@@ -1,7 +1,8 @@
 [package]
-name = "loyalty-backend"
+name = "loyalty-backend-lambda"
 version = "0.1.0"
 edition = "2021"
+
 [dependencies]
 loyalty_core = { path = "../core" }
 
@@ -13,12 +14,10 @@ tracing-subscriber = {workspace = true}
 serde = { version = "1.0.210", features = ["derive"] }
 async-trait = "0.1.83"
 chrono = "0.4.38"
+lambda_runtime = {version = "0"}
+aws_lambda_events = {version = "0"}
+base64 = {version = "0.22"}
 opentelemetry_sdk = { version = "^0.23.0", default-features = false, features = [
     "rt-tokio",
     "trace",
 ] }
-
-[dependencies.rdkafka]
-version     = "0.36.2"
-default-features = false
-features    = ["tokio", "ssl"]

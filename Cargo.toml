@@ -4,6 +4,7 @@ members = [
   "src/web",
   "src/core",
   "src/backend",
+  "src/backend-lambda",
   "src/simulator"
 ]
 

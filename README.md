@@ -1,20 +1,24 @@
 # Patterns of Modern App Development
 
-## Deploy ECS Fargate
+## AWS
+
+Docs on creating secrets
+
+### Deploy ECS Fargate
 
 ```sh
 cd ecs-fargate
 cdk deploy
 ```
 
-## Deploy Lambda
+### Deploy Lambda
 
 ```sh
 sam build
 sam deploy --guided
 ```
 
-## Deploy Fly.IO
+## Fly.IO
 
 ```sh
 fly app create --name loyalty-web

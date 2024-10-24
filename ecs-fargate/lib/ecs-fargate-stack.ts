@@ -44,7 +44,7 @@ export class EcsFargateStack extends cdk.Stack {
         image: ecs.ContainerImage.fromRegistry(
           "plantpowerjames/modern-apps-loyalty-web:latest"
         ),
-        serviceName: "loyalty-web",
+        serviceName: "loyalty-web-fargate",
         environment: "dev",
         version: "latest",
         cluster: cluster,
@@ -68,7 +68,7 @@ export class EcsFargateStack extends cdk.Stack {
       image: ecs.ContainerImage.fromRegistry(
         "plantpowerjames/modern-apps-loyalty-backend:latest"
       ),
-      serviceName: "loyalty-backend",
+      serviceName: "loyalty-backend-fargate",
       environment: "dev",
       version: "latest",
       cluster: cluster,

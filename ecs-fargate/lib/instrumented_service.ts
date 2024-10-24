@@ -67,7 +67,7 @@ export class InstrumentedService extends Construct {
       ECS_ENABLE_CONTAINER_METADATA: "true",
       ENV: props.environment,
       DD_ENV: props.environment,
-      service: props.serviceName,
+      SERVICE_NAME: props.serviceName,
       DD_SERVICE: props.serviceName,
       DD_VERSION: props.version,
       DD_IAST_ENABLED: "true",
@@ -93,6 +93,7 @@ export class InstrumentedService extends Construct {
       portMappings: props.portMappings,
       containerName: props.serviceName,
       environment: baseEnvironmentVariables,
+      secrets: props.secretVariables,
       logging: LogDrivers.firelens({
         options: {
           Name: "datadog",
@@ -106,7 +107,6 @@ export class InstrumentedService extends Construct {
         },
         secretOptions: {
           apikey: Secret.fromSsmParameter(ddApiKeyParam),
-          ...props.secretVariables
         },
       }),
     });

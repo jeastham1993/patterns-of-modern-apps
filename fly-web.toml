@@ -13,3 +13,6 @@ protocol = "tcp"
 [[services.ports]]
 handlers = ["tls", "http"]
 port = "443"
+
+[env]
+SERVICE_NAME = "loyalty-web-fly"

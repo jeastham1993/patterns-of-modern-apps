@@ -49,7 +49,7 @@ fn configure_instrumentation() -> (
     Option<Result<(), SetGlobalDefaultError>>,
     Option<TracerProvider>,
 ) {
-    let service_name = "loyalty-web";
+    let service_name = std::env::var("SERVICE_NAME").unwrap_or("loyalty-web".to_string());
 
     let mut subscribe: Option<Result<(), SetGlobalDefaultError>> = None;
     let mut provider: Option<TracerProvider> = None;

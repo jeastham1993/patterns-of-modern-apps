@@ -7,22 +7,11 @@ use tracing::info;
 use tracing::subscriber::set_global_default;
 use tracing::subscriber::SetGlobalDefaultError;
 
-#[cfg(not(feature = "lambda"))]
 use adapters::{KafkaConnection, KafkaCredentials};
-
-#[cfg(not(feature = "lambda"))]
 use tokio::signal;
-
-#[cfg(feature = "lambda")]
-use aws_lambda_events::kafka::KafkaEvent;
-#[cfg(feature = "lambda")]
-use base64::prelude::*;
-#[cfg(feature = "lambda")]
-use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 
 mod adapters;
 
-#[cfg(not(feature = "lambda"))]
 async fn process(receiver: &KafkaConnection, topic: &str) {
     info!("Subscribing");
 
@@ -36,7 +25,6 @@ async fn process(receiver: &KafkaConnection, topic: &str) {
 }
 
 #[tokio::main]
-#[cfg(not(feature = "lambda"))]
 async fn main() {
     let (subscriber, provider) = configure_instrumentation();
 
@@ -76,21 +64,11 @@ async fn main() {
     info!("Shutting down");
 }
 
-#[tokio::main]
-#[cfg(feature = "lambda")]
-async fn main() -> Result<(), Error> {
-    let adapters = ApplicationAdpaters::new().await;
-
-    let (_, _) = configure_instrumentation();
-
-    run(service_fn(|evt| function_handler(evt, &adapters))).await
-}
-
 fn configure_instrumentation() -> (
     Option<Result<(), SetGlobalDefaultError>>,
     Option<TracerProvider>,
 ) {
-    let service_name = "loyalty-backend";
+    let service_name = std::env::var("SERVICE_NAME").unwrap_or("loyalty-backend".to_string());
 
     let mut subscribe: Option<Result<(), SetGlobalDefaultError>> = None;
     let mut provider: Option<TracerProvider> = None;
@@ -112,39 +90,4 @@ fn configure_instrumentation() -> (
     }
 
     (subscribe, provider)
-}
-
-#[cfg(feature = "lambda")]
-async fn function_handler(
-    event: LambdaEvent<KafkaEvent>,
-    adapters: &ApplicationAdpaters,
-) -> Result<(), Error> {
-    for (key, val) in event.payload.records {
-        for ele in val {
-            let decoded = BASE64_STANDARD.decode(ele.value.unwrap()).unwrap();
-            info!(
-                "Decoded payload: {}",
-                String::from_utf8(decoded.clone()).unwrap()
-            );
-            let evt_payload = serde_json::from_slice(&decoded);
-
-            match evt_payload {
-                Ok(evt) => {
-                    let handle_result = adapters.order_confirmed_handler.handle(evt).await;
-
-                    match handle_result {
-                        Ok(_) => {
-                            info!("Processed successfully")
-                        }
-                        Err(_) => error!("Failure processing 'OrderConfirmed' event"),
-                    }
-                }
-                Err(_) => {
-                    error!("Failure parsing payload to 'OrderConfirmed' event")
-                }
-            }
-        }
-    }
-
-    Ok(())
 }

@@ -1,10 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
-Parameters: 
-  ServiceName: 
-    Type: String
-    Default: RustLoyalty
+Parameters:
   Env: 
     Type: String
     Default: dev
@@ -17,9 +14,9 @@ Parameters:
     Type: String
   DatabaseUrl:
     Type: String
-  ConfluentCloudCredentials:
+  ConfluentCloudCredentialsArn:
     Type: String
-  KafkaBoostrapServers:
+  KafkaBootstrapServers:
     Type: String
 
 Globals:
@@ -39,7 +36,6 @@ Globals:
         DD_SITE: !Ref DDSite
         DD_VERSION: !Ref CommitHash
         DD_EXTENSION_VERSION: "next"
-        DD_SERVICE: !Ref ServiceName
         RUST_LOG: "info"
 
 Resources:
@@ -48,9 +44,13 @@ Resources:
     Metadata:
       BuildMethod: rust-cargolambda
       BuildProperties:
-        Binary: loyalty-backend
+        Binary: loyalty-backend-lambda
     Properties:
       FunctionName: loyalty-backend
+      Environment:
+        Variables:
+          DD_SERVICE: loyalty-backend-lambda
+          SERVICE_NAME: loyalty-backend-lambda
       Timeout: 60
       Layers:
         - !Sub arn:aws:lambda:${AWS::Region}:464622532012:layer:Datadog-Extension-ARM:65
@@ -72,7 +72,7 @@ Resources:
               OnFailure:
                 Destination: !GetAtt OrderCompletedKafkaDLQ.Arn
             KafkaBootstrapServers:
-              - !Ref KafkaBoostrapServers
+              - !Ref KafkaBootstrapServers
             SourceAccessConfigurations: 
               - Type: BASIC_AUTH
                 URI: !Ref ConfluentCloudCredentialsArn
@@ -87,6 +87,10 @@ Resources:
         Binary: loyalty-web
     Properties:
       FunctionName: loyalty-web
+      Environment:
+        Variables:
+          DD_SERVICE: loyalty-web-lambda
+          SERVICE_NAME: loyalty-web-lambda
       Timeout: 3
       Policies:
         - AWSSecretsManagerGetSecretValuePolicy:

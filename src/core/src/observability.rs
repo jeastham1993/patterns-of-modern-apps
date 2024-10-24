@@ -24,8 +24,13 @@ pub fn dd_observability() -> (TracerProvider, impl Subscriber + Send + Sync) {
     let tracer: opentelemetry_sdk::trace::Tracer = new_pipeline()
         .with_service_name(env::var("DD_SERVICE").expect("DD_SERVICE is not set"))
         .with_agent_endpoint("http://127.0.0.1:8126")
-        .with_trace_config(Config::default())
+        .with_trace_config(
+            opentelemetry_sdk::trace::config()
+                .with_sampler(opentelemetry_sdk::trace::Sampler::AlwaysOn)
+                .with_id_generator(opentelemetry_sdk::trace::RandomIdGenerator::default()),
+        )
         .with_api_version(opentelemetry_datadog::ApiVersion::Version05)
+        .with_http_client(reqwest::Client::default())
         .install_batch(Tokio)
         .unwrap();
 
