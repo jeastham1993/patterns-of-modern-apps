@@ -1,8 +1,10 @@
 FROM rust:alpine as builder
 
-RUN apk add pkgconfig openssl-dev libc-dev musl-dev
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+RUN apk add pkgconfig openssl-dev libc-dev musl-dev bash alpine-sdk
 COPY . .
 COPY Cargo.toml Cargo.toml
+
 RUN cargo build --release --package loyalty-web
 RUN strip target/release/loyalty-web
 

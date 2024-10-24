@@ -2,7 +2,8 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecs from "aws-cdk-lib/aws-ecs";
-import * as ecs_patterns from "aws-cdk-lib/aws-ecs-patterns";
+import { InstrumentedService } from "./instrumented_service";
+import { WebService } from "./web_service";
 
 export class EcsFargateStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -16,52 +17,45 @@ export class EcsFargateStack extends cdk.Stack {
       vpc: vpc,
     });
 
-    // Create a load-balanced Fargate service and make it public
-    const service = new ecs_patterns.ApplicationLoadBalancedFargateService(
-      this,
-      "LoyaltyWebClusters",
-      {
-        cluster: cluster, // Required
-        cpu: 256,
-        desiredCount: 1,
-        taskImageOptions: {
-          image: ecs.ContainerImage.fromRegistry(
-            "plantpowerjames/modern-apps-loyalty-web:latest"
-          ),
-          environment: {
-            DATABASE_URL: process.env.DATABASE_URL!
+    const webService = new WebService(this, "LoyaltyWeb", {
+      instrumentService: {
+        image: ecs.ContainerImage.fromRegistry(
+          "plantpowerjames/modern-apps-loyalty-web:latest"
+        ),
+        serviceName: "loyalty-web",
+        environment: "dev",
+        version: "latest",
+        cluster: cluster,
+        vpc: vpc,
+        portMappings: [
+          {
+            containerPort: 8080,
+            protocol: ecs.Protocol.TCP,
           },
-          containerPort: 8080,
+        ],
+        envVariables: {
+          DATABASE_URL: process.env.DATABASE_URL!,
         },
-        memoryLimitMiB: 512,
-        publicLoadBalancer: true, // Default is true
-      }
-    );
-
-    service.targetGroup.configureHealthCheck({
-      port: "8080",
-      path: "/",
-      healthyHttpCodes: "200-404",
+      },
     });
 
-    const backendService = new ecs_patterns.QueueProcessingFargateService(
-      this,
-      "LoyaltyBackendService",
-      {
-        cluster: cluster,
-        cpu: 256,
-        image: ecs.ContainerImage.fromRegistry(
-          "plantpowerjames/modern-apps-loyalty-backend:latest"
-        ),
-        environment: {
-          DATABASE_URL: process.env.DATABASE_URL!,
-          BROKER: process.env.BROKER!,
-          GROUP_ID: "loyalty-fargate",
-          KAFKA_USERNAME: process.env.KAFKA_USERNAME!,
-          KAFKA_PASSWORD: process.env.KAFKA_PASSWORD!,
-        },
-        memoryLimitMiB: 512,
-      }
-    )
+    const backendService = new InstrumentedService(this, "LoyaltyBackend", {
+      image: ecs.ContainerImage.fromRegistry(
+        "plantpowerjames/modern-apps-loyalty-backend:latest"
+      ),
+      serviceName: "loyalty-backend",
+      environment: "dev",
+      version: "latest",
+      cluster: cluster,
+      vpc: vpc,
+      portMappings: undefined,
+      envVariables: {
+        DATABASE_URL: process.env.DATABASE_URL!,
+        BROKER: process.env.BROKER!,
+        GROUP_ID: "loyalty-fargate",
+        KAFKA_USERNAME: process.env.KAFKA_USERNAME!,
+        KAFKA_PASSWORD: process.env.KAFKA_PASSWORD!,
+      },
+    });
   }
 }

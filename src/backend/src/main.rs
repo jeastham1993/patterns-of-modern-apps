@@ -38,7 +38,7 @@ async fn process(receiver: &KafkaConnection, topic: &str) {
 #[tokio::main]
 #[cfg(not(feature = "lambda"))]
 async fn main() {
-    let (_, _) = configure_instrumentation();
+    let (subscriber, provider) = configure_instrumentation();
 
     let username = std::env::var("KAFKA_USERNAME");
     let password = std::env::var("KAFKA_PASSWORD");
