@@ -24,6 +24,7 @@ async fn process(receiver: &KafkaConnection, topic: &str) {
     }
 }
 
+//TODO: Update this implementation to dynamically switch to Lambda based on the Lambda runtime environment variables
 #[tokio::main]
 async fn main() {
     let (subscriber, provider) = configure_instrumentation();
