@@ -59,3 +59,11 @@ services:
     environment:
       - POSTGRES_PASSWORD=mysupersecretlocalpassword
       - POSTGRES_DB=loyalty
+
+  jaeger:
+    image: jaegertracing/opentelemetry-all-in-one:latest
+    ports:
+      - 16686:16686
+      - 13133:13133
+      - 4317:4317
+      - 4318:4318

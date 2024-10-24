@@ -56,7 +56,7 @@ impl KafkaConnection {
         Self { consumer: consumer, adapters: adapters }
     }
 
-    #[tracing::instrument(name = "kafka_process", skip(self))]
+    #[tracing::instrument(name = "process_message", skip(self))]
     pub async fn process(&self) {
         info!("Wait for receive");
 

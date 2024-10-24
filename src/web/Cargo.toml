@@ -13,4 +13,8 @@ tracing = "0.1.40"
 serde = { version = "1.0", features = ["derive"] }
 axum = "0.7.7"
 axum-tracing-opentelemetry = "0.21.1"
-opentelemetry = { version = "0.23", features = ["trace"] }
+opentelemetry = { version = "^0.23.0", default-features = false, features = ["trace"]}
+opentelemetry_sdk = { version = "^0.23.0", default-features = false, features = [
+    "rt-tokio",
+    "trace",
+] }
