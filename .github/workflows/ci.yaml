@@ -6,6 +6,7 @@ on:
       - 'src/**'
       - 'Dockerfile-web'
       - 'Dockerfile-backend'
+      - '.github/workflows/ci.yaml'
 
 permissions:
   id-token: write
