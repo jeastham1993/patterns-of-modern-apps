@@ -9,6 +9,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:mysupersecretlocalpassword@postgres/loyalty
       - SERVICE_NAME=loyalty-web-local
+      - OTLP_ENDPOINT=http://jaeger:4317
 
   backend:
     image: loyalty-backend
@@ -20,7 +21,16 @@ services:
       - BROKER=kafka:29092
       - GROUP_ID=loyalty-backend
       - SERVICE_NAME=loyalty-backend-local
+      - OTLP_ENDPOINT=http://jaeger:4317
   
+  jaeger:
+    image: jaegertracing/opentelemetry-all-in-one:latest
+    ports:
+      - 16686:16686
+      - 13133:13133
+      - 4317:4317
+      - 4318:4318
+
   zoo:
     image: confluentinc/cp-zookeeper:7.3.2
     hostname: zoo
