@@ -44,6 +44,8 @@ terraform apply --var-file dev.tfvars
 
 ## GCP
 
+Uses minimum instances and CPU always on for background processing appplication to allow Kafka consumption.
+
 ## Cloud Run
 
 ```sh
