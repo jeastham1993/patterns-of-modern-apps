@@ -6,7 +6,7 @@ At their core, modern applications are built of a set of common building blocks.
 - background applications (queue processors, asynchronous processes, event handlers)
 - storage (databases, blob storage)
 - integration (queues, topics, buses, streams)
-- caches (because, performance!)
+- caches (because ya'know performance)
 
 This repository aims to explore these different building blocks, and the patterns and combinations. And it is going to do all of that using serverless technologies, for all of the different building blocks.
 
@@ -22,35 +22,35 @@ Historically, serverless has been defined by a set of core principles. [Momento]
 4. No planned downtime
 5. No instances
 
-I like this definition, but there is one caveat I would add. Viewing serverless as 'all or nothing', either your serverless or your not, can remove some useful services.
+I like this definition, but I would add one caveat. Viewing serverless as 'all or nothing'—either you're serverless or you're not—can remove some useful services.
 
-Take a service like Azure Container Apps (ACA). ACA is a container orchestrator that provides an abstraction on top of Kubernetes. You can deploy an application by just providing a container image, CPU/memory requirements and scaling behaviour if required. **There is almost 0 operational overhead running an application in this way**.
+Take a service like Azure Container Apps (ACA). ACA is a container orchestrator that provides an abstraction on top of Kubernetes. You can deploy an application by providing a container image, CPU/memory requirements and scaling behaviour if required. **There is almost 0 operational overhead running an application this way**.
 
-Looking at the Litmus test, this meets the criteria of 1, 3, 4 and 5. 2 gives us nuance. An application running on ACA won't automatically scale to zero, you can configure scaling rules but it doesn't 'just happen'. When stopped, they don't cost you anything. You pay only when your app is running. But your app is running *all of the time* even if there aren't any requests coming in. 
+Looking at the Litmus test, this meets the criteria of 1, 3, 4 and 5. 2 gives us nuance. An application running on ACA won't automatically scale to zero; you can configure scaling rules, but it doesn't 'just happen'. When stopped, they don't cost you anything. You pay only when your app is running. But your app is running *all of the time* even if no requests are coming in. 
 
-This application is still serverless. No, it doesn't automatically scale to zero. Yes, you would be paying for the application running when no requests are coming in. **But you can deploy an application with next to 0 operational overhead**.
+This application is still serverless. No, it doesn't automatically scale to zero. Yes, you would pay for the application running when no requests are coming in. **But you can deploy an application with next to 0 operational overhead**.
 
-> Serverless is a spectrum, not a binary decision. You can choose to be more or less serverless based on the requirements of your application
+> Serverless is a spectrum, not a binary decision. You can be more or less serverless based on the requirements of your application.
 
-This is what I want to demonstrate in this repository. How you can run modern web applications on various different cloud providers, and do so in a way with little to no operational overhead.
+I want to demonstrate in this repository how you can run modern web applications on various cloud providers with little to no operational overhead.
 
 ### What does it mean for you?
 
-For you as an individual developer, at least if you're anything like me, you want to run your application with as little infrastructure worries as possible. "Here's my application, run it with this CPU and memory, scale it like this and frankly I don't care about anything else". If your company has invested time, energy and money into building a Kubernetes platform then great.
+If you're a developer, at least anything like me, you want to run your application with as little infrastructure worries as possible. "Here's my application. Run it with this CPU and memory, scale it like this, and frankly, I don't care about anything else." If your company has invested time, energy, and money into building a Kubernetes platform, then great.
 
-The conversation around managed services vs Kubernets becomes more interesting when you zoom out and look bigger picture. Does your organisation as a whole have a good reason to invest in building a Kubernetes platform (which honestly is just rebuilding Cloud Run/Fargate/Container Apps). If you have a good reason to do it (that isn't CV driven development) then great do it. 
+The conversation around managed services vs. Kubernetes becomes more interesting when you zoom out and look at the bigger picture. Does your organisation as a whole have a good reason to invest in building a Kubernetes platform (which honestly is just rebuilding Cloud Run/Fargate/Container Apps)? If you have a good reason to do it (that isn't CV-driven development), then great, do it. 
 
-But otherwise, use a managed serverless, be as serverless as possible, and build your application in a way that keeps you portable.
+Otherwise, use a managed serverless, be as serverless as possible, and build your application in a way that keeps you portable.
 
 ## The Application
 
-The application in question is written in Rust, and is used for managing loyalty points for a fictional eCommerce company. A background process receives events from an `order-completed` Kafka topic, processes the event and stores loyalty point information in a Postgres database.
+The application in question is written in Rust and used to manage loyalty points for a fictional eCommerce company. A background process receives events from an `order-completed` Kafka topic, processes the event, and stores loyalty point information in a Postgres database.
 
-A seperate web application exposes two endpoints, one to GET current loyalty account information for a customer and a second to spend (POST) loyalty points. These two applications run as seperate containers, both connecting to the same database.
+A separate web application exposes two endpoints: one to GET a customer's current loyalty account information and a second to spend (POST) loyalty points. These two applications run as separate containers, both connecting to the same database.
 
 ![Architecture Diagram](assets/arch-diagram.png)
 
-The internals of the application aren't important, just know one exposes a web app, one runs a background process handling events, and there is shared storage (Postgres).
+The internals of the application are minor; just know that one exposes a web app, one runs a background process handling events, and there is shared storage (Postgres).
 
 Let's now take a look at how you can run this application:
 
