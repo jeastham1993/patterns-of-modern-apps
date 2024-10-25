@@ -34,6 +34,8 @@ This application is still serverless. No, it doesn't automatically scale to zero
 
 This is what I want to demonstrate in this repository. How you can run modern web applications on various different cloud providers, and do so in a way with little to no operational overhead.
 
+### What does it mean for you?
+
 For you as an individual developer, at least if you're anything like me, you want to run your application with as little infrastructure worries as possible. "Here's my application, run it with this CPU and memory, scale it like this and frankly I don't care about anything else". If your company has invested time, energy and money into building a Kubernetes platform then great.
 
 The conversation around managed services vs Kubernets becomes more interesting when you zoom out and look bigger picture. Does your organisation as a whole have a good reason to invest in building a Kubernetes platform (which honestly is just rebuilding Cloud Run/Fargate/Container Apps). If you have a good reason to do it (that isn't CV driven development) then great do it. 
