@@ -9,3 +9,7 @@ README.md
 samconfig.toml
 template.yaml
 .env
+assets/*
+azure-container-apps/*
+ecs-fargate/*
+google-cloud-run/*
