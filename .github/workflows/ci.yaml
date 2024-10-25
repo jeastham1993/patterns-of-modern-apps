@@ -31,7 +31,7 @@ jobs:
         with:
           file: Dockerfile-web
           push: true
-          tags: plantpowerjames/modern-apps-loyalty-web:serverless-init
+          tags: plantpowerjames/modern-apps-loyalty-web:serverless-init-alpine
           platforms: linux/amd64
       -
         name: Build and push backend
@@ -39,5 +39,5 @@ jobs:
         with:
           file: Dockerfile-backend
           push: true
-          tags: plantpowerjames/modern-apps-loyalty-backend:serverless-init
+          tags: plantpowerjames/modern-apps-loyalty-backend:serverless-init-alpine
           platforms: linux/amd64
