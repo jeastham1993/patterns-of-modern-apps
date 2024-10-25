@@ -2,6 +2,10 @@ variable "env" {
   type = string
 }
 
+variable "app_version" {
+  type = string
+}
+
 variable "dd_site" {
   type = string
 }

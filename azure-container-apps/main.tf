@@ -52,7 +52,7 @@ resource "azurerm_container_app" "loyalty_web" {
     max_replicas = 1
     container {
       name   = "loyalty-web"
-      image  = "plantpowerjames/modern-apps-loyalty-web:latest"
+      image  = "plantpowerjames/modern-apps-loyalty-web:${var.app_version}"
       cpu    = 0.25
       memory = "0.5Gi"
 
@@ -105,7 +105,7 @@ resource "azurerm_container_app" "loyalty_web" {
       }
       env {
         name  = "DD_VERSION"
-        value = "latest"
+        value = var.app_version
       }
       env {
         name  = "DD_AZURE_SUBSCRIPTION_ID"
@@ -150,7 +150,7 @@ resource "azurerm_container_app" "loyalty_backend" {
     max_replicas = 1
     container {
       name   = "loyalty-web"
-      image  = "plantpowerjames/modern-apps-loyalty-backend:latest"
+      image  = "plantpowerjames/modern-apps-loyalty-backend:${var.app_version}"
       cpu    = 0.25
       memory = "0.5Gi"
 
@@ -223,7 +223,7 @@ resource "azurerm_container_app" "loyalty_backend" {
       }
       env {
         name  = "DD_VERSION"
-        value = "latest"
+        value = var.app_version
       }
       env {
         name  = "DD_AZURE_SUBSCRIPTION_ID"
