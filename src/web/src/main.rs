@@ -3,21 +3,17 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use loyalty_core::{
-    configure_instrumentation, dd_observability, log_observability, otlp_observability, use_datadog, use_otlp, ApplicationAdpaters, LoyaltyDto
-};
-use opentelemetry_sdk::trace::TracerProvider;
-use tracing::{
-    info,
-    subscriber::{set_global_default, SetGlobalDefaultError},
+    configure_instrumentation, ApplicationAdapters, LoyaltyDto, LoyaltyErrors,
+    SpendLoyaltyPointsCommand,
 };
 
 pub struct AppState {
-    pub application: Arc<ApplicationAdpaters>,
+    pub application: Arc<ApplicationAdapters>,
 }
 
 #[tokio::main]
@@ -25,7 +21,7 @@ async fn main() {
     // initialize tracing
     let (_provider, _subscriber) = configure_instrumentation();
 
-    let application_adapters = ApplicationAdpaters::new().await;
+    let application_adapters = ApplicationAdapters::new().await;
 
     let shared_state = Arc::new(AppState {
         application: Arc::new(application_adapters),
@@ -33,6 +29,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/loyalty/:customer_id", get(get_loyalty_points))
+        .route("/loyalty/:customer_id/spend", post(spend_loyalty_points))
         .layer(OtelInResponseLayer::default())
         .layer(OtelAxumLayer::default())
         .with_state(shared_state);
@@ -49,7 +46,6 @@ async fn get_loyalty_points(
     State(state): State<Arc<AppState>>,
     path: Path<String>,
 ) -> (StatusCode, Json<Option<LoyaltyDto>>) {
-    info!("Handling get_loyalty_points");
     let loyalty_points = state
         .application
         .retrieve_loyalty_query_handler
@@ -59,6 +55,23 @@ async fn get_loyalty_points(
     match loyalty_points {
         Ok(loyalty) => (StatusCode::OK, (Json(Some(loyalty)))),
         Err(_) => (StatusCode::NOT_FOUND, Json(None)),
+    }
+}
+
+#[tracing::instrument(name = "spend_loyalty_points", skip(state, payload))]
+async fn spend_loyalty_points(
+    State(state): State<Arc<AppState>>,
+    Json(mut payload): Json<SpendLoyaltyPointsCommand>,
+) -> (StatusCode, Json<Option<LoyaltyDto>>) {
+    let loyalty_points = state.application.spend_points_handler.handle(payload).await;
+
+    match loyalty_points {
+        Ok(account) => (StatusCode::OK, (Json(Some(account)))),
+        Err(e) => match e {
+            LoyaltyErrors::PointsNotAvailable(_) => (StatusCode::BAD_REQUEST, (Json(None))),
+            LoyaltyErrors::AccountNotFound() => (StatusCode::NOT_FOUND, (Json(None))),
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, (Json(None))),
+        },
     }
 }
 

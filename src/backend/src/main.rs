@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
 use axum::Router;
 use axum::routing::get;
-use loyalty_core::{configure_instrumentation, ApplicationAdpaters};
+use loyalty_core::{configure_instrumentation, ApplicationAdapters};
 use tracing::info;
 
 use adapters::{KafkaConnection, KafkaCredentials};
@@ -36,7 +36,7 @@ async fn main() {
         Err(_) => None,
     };
 
-    let application_adapters = ApplicationAdpaters::new().await;
+    let application_adapters = ApplicationAdapters::new().await;
 
     let connection = KafkaConnection::new(
         std::env::var("BROKER").unwrap(),

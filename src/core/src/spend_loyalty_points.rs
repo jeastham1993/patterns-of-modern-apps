@@ -6,6 +6,7 @@ use crate::{
 };
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SpendLoyaltyPointsCommand {
     customer_id: String,
     order_number: String,

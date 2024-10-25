@@ -1,4 +1,4 @@
-use loyalty_core::{configure_instrumentation, ApplicationAdpaters};
+use loyalty_core::{configure_instrumentation, ApplicationAdapters};
 use tracing::info;
 
 use aws_lambda_events::kafka::KafkaEvent;
@@ -9,7 +9,7 @@ mod adapters;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let adapters = ApplicationAdpaters::new().await;
+    let adapters = ApplicationAdapters::new().await;
 
     let (_, _) = configure_instrumentation();
 
@@ -18,7 +18,7 @@ async fn main() -> Result<(), Error> {
 
 async fn function_handler(
     event: LambdaEvent<KafkaEvent>,
-    adapters: &ApplicationAdpaters,
+    adapters: &ApplicationAdapters,
 ) -> Result<(), Error> {
     for (key, val) in event.payload.records {
         for ele in val {

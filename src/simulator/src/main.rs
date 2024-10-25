@@ -57,14 +57,17 @@ async fn main() {
         Ok(username) => {
             info!("Publishing to {}", &broker);
             ClientConfig::new()
-            .set("bootstrap.servers", broker)
-            .set("security.protocol", "SASL_SSL")
-            .set("sasl.mechanisms", "PLAIN")
-            .set("sasl.username", username)
-            .set("sasl.password", password.expect("Password should be set if user is"))
-            .create()
-            .expect("Producer creation failed")
-        },
+                .set("bootstrap.servers", broker)
+                .set("security.protocol", "SASL_SSL")
+                .set("sasl.mechanisms", "PLAIN")
+                .set("sasl.username", username)
+                .set(
+                    "sasl.password",
+                    password.expect("Password should be set if user is"),
+                )
+                .create()
+                .expect("Producer creation failed")
+        }
         Err(_) => ClientConfig::new()
             .set("bootstrap.servers", broker)
             .create()

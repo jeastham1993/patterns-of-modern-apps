@@ -1,4 +1,4 @@
-use loyalty_core::ApplicationAdpaters;
+use loyalty_core::ApplicationAdapters;
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -16,7 +16,7 @@ type LoggingConsumer = StreamConsumer<CustomContext>;
 
 pub struct KafkaConnection {
     pub consumer: LoggingConsumer,
-    adapters: ApplicationAdpaters
+    adapters: ApplicationAdapters
 }
 
 pub struct KafkaCredentials {
@@ -30,7 +30,7 @@ impl KafkaConnection {
         broker: String,
         group_id: String,
         credentials: Option<KafkaCredentials>,
-        adapters: ApplicationAdpaters
+        adapters: ApplicationAdapters
     ) -> KafkaConnection {
         let context = CustomContext;
 

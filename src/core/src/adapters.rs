@@ -7,15 +7,17 @@ use tracing::info;
 
 use crate::{
     loyalty::{LoyaltyAccount, LoyaltyErrors, LoyaltyPoints},
+    spend_loyalty_points::SpendLoyaltyPointsCommandHandler,
     LoyaltyAccountTransaction, OrderConfirmedEventHandler, RetrieveLoyaltyAccountQueryHandler,
 };
 
-pub struct ApplicationAdpaters {
+pub struct ApplicationAdapters {
     pub order_confirmed_handler: OrderConfirmedEventHandler<PostgresLoyaltyPoints>,
     pub retrieve_loyalty_query_handler: RetrieveLoyaltyAccountQueryHandler<PostgresLoyaltyPoints>,
+    pub spend_points_handler: SpendLoyaltyPointsCommandHandler<PostgresLoyaltyPoints>,
 }
 
-impl ApplicationAdpaters {
+impl ApplicationAdapters {
     #[tracing::instrument(name = "new_application_adapters")]
     pub async fn new() -> Self {
         let database_pool = PgPool::connect(&env::var("DATABASE_URL").unwrap())
@@ -27,9 +29,12 @@ impl ApplicationAdpaters {
             })
             .await,
             retrieve_loyalty_query_handler: RetrieveLoyaltyAccountQueryHandler::new(
-                PostgresLoyaltyPoints { db: database_pool },
+                PostgresLoyaltyPoints { db: database_pool.clone() },
             )
             .await,
+            spend_points_handler: SpendLoyaltyPointsCommandHandler::new(PostgresLoyaltyPoints {
+                db: database_pool.clone(),
+            }).await,
         }
     }
 }

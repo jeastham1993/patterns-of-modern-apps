@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use tracing::info;
 
-use crate::loyalty::{LoyaltyAccount, LoyaltyPoints};
+use crate::loyalty::LoyaltyPoints;
 
 #[derive(Deserialize)]
 pub struct OrderConfirmed {
@@ -36,7 +36,17 @@ impl<T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
             }
             Err(e) => match e {
                 crate::loyalty::LoyaltyErrors::AccountNotFound() => {
-                    LoyaltyAccount::new(evt.customer_id).unwrap()
+                    let new_account = self
+                        .loyalty_points
+                        .new_account(evt.customer_id)
+                        .await
+                        .map_err(|e| {
+                            tracing::error!("Failure creating new account: {:?}", e);
+
+                            ()
+                        })?;
+
+                    new_account
                 }
                 crate::loyalty::LoyaltyErrors::InvalidValues(e)
                 | crate::loyalty::LoyaltyErrors::PointsNotAvailable(e)
@@ -64,5 +74,78 @@ impl<T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        loyalty::{LoyaltyAccount, MockLoyaltyPoints},
+        LoyaltyErrors,
+    };
+
+    use super::*;
+    use mockall::predicate;
+
+    #[tokio::test]
+    async fn on_valid_event_for_new_customer_should_create_account_and_add_points() {
+        let test_customer_id = "james";
+        let test_order_id = "ORD987";
+        let test_order_value = 100.00;
+
+        let mut loyalty_points = MockLoyaltyPoints::new();
+        loyalty_points
+            .expect_retrieve()
+            .with(predicate::eq(test_customer_id))
+            .times(1)
+            .returning(move |_| Err(LoyaltyErrors::AccountNotFound()));
+        loyalty_points
+            .expect_add_transaction()
+            .times(1)
+            .returning(|_, _| Ok(()));
+        loyalty_points
+            .expect_new_account()
+            .times(1)
+            .returning(|customer_id| LoyaltyAccount::new(customer_id));
+
+        let evt = OrderConfirmed {
+            customer_id: test_customer_id.to_string(),
+            order_id: test_order_id.to_string(),
+            order_value: test_order_value,
+        };
+        let handler = OrderConfirmedEventHandler::new(loyalty_points).await;
+
+        let result = handler.handle(evt).await;
+
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[tokio::test]
+    async fn on_valid_event_for_existing_customer_should_create_account_and_add_points() {
+        let test_customer_id = "james";
+        let test_order_id = "ORD987";
+        let test_order_value = 100.00;
+
+        let mut loyalty_points = MockLoyaltyPoints::new();
+        loyalty_points
+            .expect_retrieve()
+            .with(predicate::eq(test_customer_id))
+            .times(1)
+            .returning(|customer_id| LoyaltyAccount::from(customer_id.to_string(), 10.0, vec![]));
+        loyalty_points
+            .expect_add_transaction()
+            .times(1)
+            .returning(|_, _| Ok(()));
+
+        let evt = OrderConfirmed {
+            customer_id: test_customer_id.to_string(),
+            order_id: test_order_id.to_string(),
+            order_value: test_order_value,
+        };
+        let handler = OrderConfirmedEventHandler::new(loyalty_points).await;
+
+        let result = handler.handle(evt).await;
+
+        assert_eq!(result.is_ok(), true);
     }
 }

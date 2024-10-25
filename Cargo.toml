@@ -5,7 +5,8 @@ members = [
   "src/core",
   "src/backend",
   "src/backend-lambda",
-  "src/simulator"
+  "src/simulator",
+  "integration-tests"
 ]
 
 [workspace.dependencies]
