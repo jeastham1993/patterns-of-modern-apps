@@ -1,3 +1,6 @@
+use axum::http::StatusCode;
+use axum::Router;
+use axum::routing::get;
 use loyalty_core::ApplicationAdpaters;
 use loyalty_core::{
     dd_observability, log_observability, otlp_observability, use_datadog, use_otlp,
@@ -53,6 +56,16 @@ async fn main() {
         process(&connection, "order-completed").await;
     });
 
+    tokio::spawn(async move {
+        let app = Router::new()
+        .route("/health", get(health));
+
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+        axum::serve(listener, app.into_make_service())
+            .await
+            .unwrap();
+    });
+
     match signal::ctrl_c().await {
         Ok(()) => {
             info!("Shutting down");
@@ -63,6 +76,10 @@ async fn main() {
     }
 
     info!("Shutting down");
+}
+
+async fn health() -> StatusCode {
+    StatusCode::OK
 }
 
 fn configure_instrumentation() -> (
