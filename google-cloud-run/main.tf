@@ -40,7 +40,7 @@ resource "google_cloud_run_v2_service" "loyalty_web" {
     revision        = var.canary_enabled ? local.rev_name_canary : local.rev_name_live
     service_account = google_service_account.cloudrun_service_identity.email
     containers {
-      image = "docker.io/plantpowerjames/modern-apps-loyalty-web:latest"
+      image = var.canary_enabled ? "docker.io/plantpowerjames/modern-apps-loyalty-web:${var.canary_image_tag}" : "docker.io/plantpowerjames/modern-apps-loyalty-web:${var.live_image_tag}"
       env {
         name  = "SERVICE_NAME"
         value = "loyalty-web-gcp"
@@ -49,7 +49,7 @@ resource "google_cloud_run_v2_service" "loyalty_web" {
         name = "DATABASE_URL"
         value_source {
           secret_key_ref {
-            secret  = "projects/854841797518/secrets/database_url"
+            secret  = google_secret_manager_secret.database_url.id
             version = "1"
           }
         }
@@ -75,24 +75,24 @@ resource "google_cloud_run_v2_service" "loyalty_web" {
       image = "gcr.io/datadoghq/serverless-init:latest"
       env {
         name  = "DD_ENV"
-        value = "dev"
+        value = var.env
       }
       env {
         name  = "DD_SITE"
-        value = "datadoghq.eu"
+        value = var.dd_site
       }
       env {
         name = "DD_API_KEY"
         value_source {
           secret_key_ref {
-            secret  = "projects/854841797518/secrets/dd-api-key"
+            secret  = google_secret_manager_secret.dd_api_key.id
             version = "1"
           }
         }
       }
       env {
         name  = "DD_VERSION"
-        value = "latest"
+        value = var.canary_enabled ? var.canary_image_tag : var.live_image_tag
       }
       env {
         name  = "GCLOUD_PROJECT_ID"
@@ -111,7 +111,7 @@ resource "google_cloud_run_v2_service" "loyalty_web" {
     percent = var.canary_enabled ? var.canary_percent : 100
     # revision is named live by default. When canary is enabled, a new revision named canary is deployed
     revision = var.canary_enabled ? local.rev_name_canary : local.rev_name_live
-    tag      = var.canary_enabled ? var.canary_image_tag : var.live_image_tag
+    tag      = var.canary_enabled ? local.rev_name_canary : local.rev_name_live
   }
 
   dynamic "traffic" {
@@ -151,7 +151,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
     revision        = var.canary_enabled ? local.backend_rev_name_canary : local.backend_rev_name_live
     service_account = google_service_account.cloudrun_service_identity.email
     containers {
-      image = "docker.io/plantpowerjames/modern-apps-loyalty-backend:latest"
+      image = var.canary_enabled ? "docker.io/plantpowerjames/modern-apps-loyalty-backend:${var.canary_image_tag}" : "docker.io/plantpowerjames/modern-apps-loyalty-backend:${var.live_image_tag}"
       env {
         name  = "SERVICE_NAME"
         value = "loyalty-backend-gcp"
@@ -160,7 +160,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         name = "DATABASE_URL"
         value_source {
           secret_key_ref {
-            secret  = "projects/854841797518/secrets/database_url"
+            secret  = google_secret_manager_secret.database_url.id
             version = "1"
           }
         }
@@ -169,7 +169,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         name = "BROKER"
         value_source {
           secret_key_ref {
-            secret  = "projects/854841797518/secrets/kafka_broker"
+            secret  = google_secret_manager_secret.kafka_broker.id
             version = "1"
           }
         }
@@ -182,7 +182,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         name = "KAFKA_USERNAME"
         value_source {
           secret_key_ref {
-            secret  = "projects/854841797518/secrets/kafka_username"
+            secret  = google_secret_manager_secret.kafka_username.id
             version = "1"
           }
         }
@@ -191,7 +191,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         name = "KAFKA_PASSWORD"
         value_source {
           secret_key_ref {
-            secret  = "projects/854841797518/secrets/kafka_password"
+            secret  = google_secret_manager_secret.kafka_password.id
             version = "1"
           }
         }
@@ -217,24 +217,24 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
       image = "gcr.io/datadoghq/serverless-init:latest"
       env {
         name  = "DD_ENV"
-        value = "dev"
+        value = var.env
       }
       env {
         name  = "DD_SITE"
-        value = "datadoghq.eu"
+        value = var.dd_site
       }
       env {
         name = "DD_API_KEY"
         value_source {
           secret_key_ref {
-            secret  = "projects/854841797518/secrets/dd-api-key"
+            secret  = google_secret_manager_secret.dd_api_key.id
             version = "1"
           }
         }
       }
       env {
         name  = "DD_VERSION"
-        value = "latest"
+        value = var.canary_enabled ? var.canary_image_tag : var.live_image_tag
       }
       env {
         name  = "GCLOUD_PROJECT_ID"
@@ -261,7 +261,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
     percent = var.canary_enabled ? var.canary_percent : 100
     # revision is named live by default. When canary is enabled, a new revision named canary is deployed
     revision = var.canary_enabled ? local.backend_rev_name_canary : local.backend_rev_name_live
-    tag      = var.canary_enabled ? var.canary_image_tag : var.live_image_tag
+    tag      = var.canary_enabled ? local.backend_rev_name_canary : local.backend_rev_name_live
   }
 
   dynamic "traffic" {
@@ -277,31 +277,31 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
 }
 
 resource "google_secret_manager_secret_iam_member" "dd-secret-access" {
-  secret_id = "projects/854841797518/secrets/dd-api-key"
+  secret_id = google_secret_manager_secret.dd_api_key.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "db-secret-access" {
-  secret_id = "projects/854841797518/secrets/database_url"
+  secret_id = google_secret_manager_secret.database_url.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "broker-secret-access" {
-  secret_id = "projects/854841797518/secrets/kafka_broker"
+  secret_id = google_secret_manager_secret.kafka_broker.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "username-secret-access" {
-  secret_id = "projects/854841797518/secrets/kafka_username"
+  secret_id = google_secret_manager_secret.kafka_username.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "password-secret-access" {
-  secret_id = "projects/854841797518/secrets/kafka_password"
+  secret_id = google_secret_manager_secret.kafka_password.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }

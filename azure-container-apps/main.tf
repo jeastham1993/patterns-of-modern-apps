@@ -35,6 +35,14 @@ resource "azurerm_container_app" "loyalty_web" {
   container_app_environment_id = azurerm_container_app_environment.modern_apps_container_apps_dev_environment.id
   resource_group_name          = azurerm_resource_group.modern_apps_container_apps.name
   revision_mode                = "Single"
+  secret {
+    name  = "database-url"
+    value = var.database_url
+  }
+  secret {
+    name  = "dd-api-key"
+    value = var.dd_api_key
+  }
   identity {
     identity_ids = [azurerm_user_assigned_identity.loyalty_app_identity.id]
     type         = "UserAssigned"
@@ -55,26 +63,9 @@ resource "azurerm_container_app" "loyalty_web" {
       image  = "plantpowerjames/modern-apps-loyalty-web:${var.app_version}"
       cpu    = 0.25
       memory = "0.5Gi"
-
       env {
-        name  = "DATABASE_URL"
-        value = var.database_url
-      }
-      env {
-        name  = "DD_TRACE_OTEL_ENABLED"
-        value = "true"
-      }
-      env {
-        name  = "DD_RUNTIME_METRICS_ENABLED"
-        value = "true"
-      }
-      env {
-        name  = "DD_LOGS_INJECTION"
-        value = "true"
-      }
-      env {
-        name  = "DD_ENV"
-        value = var.env
+        name        = "DATABASE_URL"
+        secret_name = "database-url"
       }
       env {
         name  = "OTLP_ENDPOINT"
@@ -100,8 +91,8 @@ resource "azurerm_container_app" "loyalty_web" {
         value = var.env
       }
       env {
-        name  = "DD_API_KEY"
-        value = var.dd_api_key
+        name        = "DD_API_KEY"
+        secret_name = "dd-api-key"
       }
       env {
         name  = "DD_VERSION"
@@ -133,6 +124,26 @@ resource "azurerm_container_app" "loyalty_backend" {
   container_app_environment_id = azurerm_container_app_environment.modern_apps_container_apps_dev_environment.id
   resource_group_name          = azurerm_resource_group.modern_apps_container_apps.name
   revision_mode                = "Single"
+  secret {
+    name  = "database-url"
+    value = var.database_url
+  }
+  secret {
+    name  = "dd-api-key"
+    value = var.dd_api_key
+  }
+  secret {
+    name  = "kafka-broker"
+    value = var.kafka_broker
+  }
+  secret {
+    name  = "kafka-username"
+    value = var.kafka_username
+  }
+  secret {
+    name  = "kafka-password"
+    value = var.kafka_password
+  }
   identity {
     identity_ids = [azurerm_user_assigned_identity.loyalty_app_identity.id]
     type         = "UserAssigned"
@@ -155,13 +166,13 @@ resource "azurerm_container_app" "loyalty_backend" {
       memory = "0.5Gi"
 
       env {
-        name  = "DATABASE_URL"
-        value = var.database_url
+        name        = "DATABASE_URL"
+        secret_name = "database-url"
       }
 
       env {
-        name  = "BROKER"
-        value = var.kafka_broker
+        name        = "BROKER"
+        secret_name = "kafka-broker"
       }
 
       env {
@@ -170,29 +181,13 @@ resource "azurerm_container_app" "loyalty_backend" {
       }
 
       env {
-        name  = "KAFKA_USERNAME"
-        value = var.kafka_username
+        name        = "KAFKA_USERNAME"
+        secret_name = "kafka-username"
       }
 
       env {
-        name  = "KAFKA_PASSWORD"
-        value = var.kafka_password
-      }
-      env {
-        name  = "DD_TRACE_OTEL_ENABLED"
-        value = "true"
-      }
-      env {
-        name  = "DD_RUNTIME_METRICS_ENABLED"
-        value = "true"
-      }
-      env {
-        name  = "DD_LOGS_INJECTION"
-        value = "true"
-      }
-      env {
-        name  = "DD_ENV"
-        value = var.env
+        name        = "KAFKA_PASSWORD"
+        secret_name = "kafka-password"
       }
       env {
         name  = "OTLP_ENDPOINT"
@@ -218,8 +213,8 @@ resource "azurerm_container_app" "loyalty_backend" {
         value = var.env
       }
       env {
-        name  = "DD_API_KEY"
-        value = var.dd_api_key
+        name        = "DD_API_KEY"
+        secret_name = "dd-api-key"
       }
       env {
         name  = "DD_VERSION"
