@@ -36,7 +36,13 @@ I want to demonstrate in this repository how you can run modern web applications
 
 ### What does it mean for you?
 
-If you're a developer, at least anything like me, you want to run your application with as little infrastructure worries as possible. "Here's my application. Run it with this CPU and memory, scale it like this, and frankly, I don't care about anything else." If your company has invested time, energy, and money into building a Kubernetes platform, then great.
+If you're a developer, at least anything like me, you want to run your application with as little infrastructure worries as possible. *"Here's my application. It needs this CPU and memory, scale it like this, and frankly, I don't care about anything else."*
+
+If your company has invested time, energy, and money into building a Kubernetes platform, then great. That can *feel* serverless to you as a developer, leverage it. And this isn't to say Kubernetes isn't valuable, it very much is. But it's valuable when your application needs it. 
+
+> If your ability to dynamically scale and manage infrastructure is a core differentiator for your business and your customers, great. Go for it. Otherwise, you probably don't need Kubernetes
+
+Are you training a machine learning model, doing some GPU heavy computation, or ingesting dynamic/large amounts of data. Virtual machines and Kubernetes is probably useful.
 
 The conversation around managed services vs. Kubernetes becomes more interesting when you zoom out and look at the bigger picture. Does your organisation as a whole have a good reason to invest in building a Kubernetes platform (which honestly is just rebuilding Cloud Run/Fargate/Container Apps)? If you have a good reason to do it (that isn't CV-driven development), then great, do it. 
 

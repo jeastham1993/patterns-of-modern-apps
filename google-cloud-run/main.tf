@@ -299,6 +299,7 @@ resource "google_secret_manager_secret_iam_member" "username-secret-access" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }
+
 resource "google_secret_manager_secret_iam_member" "password-secret-access" {
   secret_id = "projects/854841797518/secrets/kafka_password"
   role      = "roles/secretmanager.secretAccessor"
