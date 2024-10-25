@@ -58,10 +58,11 @@ Let's now take a look at how you can run this application:
 
 When you deploy the application to one of the various cloud providers detailed below, you will need to have a Postgres database and a Kafka cluster with a topic called `order-completed`. Of course, you can setup a Kafka cluster and Postgres compatible database in whatever way you choose. However, I'd highly recommend checking out:
 
-- [Neon](https://neon.tech/) Postgres
-- [Confluent Cloud](https://www.confluent.io/)
+- [Neon for Postgres](https://neon.tech/)
+- [Confluent Cloud for Kafka](https://www.confluent.io/)
+- [Momento for caching](https://www.gomomento.com/)
 
-Both Confluent and Neon have free tiers that you can use to provision **serverless** (yes, I said it) Kafka clusters and Postgres databases. Neon is actually the closest I've seen to a fully serverless database service.
+Confluent, Neon and Momento all have free tiers that you can use to provision **serverless** (yes, I said it) Kafka clusters, Postgres databases and caches. Neon is actually the closest I've seen to a fully serverless database service.
 
 ## Local
 
