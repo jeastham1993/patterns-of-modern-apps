@@ -4,6 +4,9 @@ use serde::Serialize;
 use thiserror::Error;
 use tracing::info;
 
+#[cfg(any(test, feature = "mocks"))]
+use mockall::{automock, predicate::*};
+
 #[derive(Error, Debug)]
 pub enum LoyaltyErrors {
     #[error("Invalid Values")]
@@ -102,7 +105,10 @@ impl LoyaltyAccount {
 
         if existing_transactions.len() > 0 {
             info!("Transaction already exists for order {}", order_number);
-            return Err(LoyaltyErrors::TransactionExistsForOrder(format!("Transaction already exists for order {}", order_number)));
+            return Err(LoyaltyErrors::TransactionExistsForOrder(format!(
+                "Transaction already exists for order {}",
+                order_number
+            )));
         }
 
         let points = order_value * Self::LOYALTY_ACCOUNT_PERCENTAGE;
@@ -121,8 +127,8 @@ impl LoyaltyAccount {
 
     pub(crate) fn spend_points(
         &mut self,
-        order_number: String,
-        spend: f32,
+        order_number: &str,
+        spend: &f32,
     ) -> Result<LoyaltyAccountTransaction, LoyaltyErrors> {
         let new_points_total = self.current_points - spend;
 
@@ -139,14 +145,17 @@ impl LoyaltyAccount {
             .collect();
 
         if existing_transactions.len() > 0 {
-            return Err(LoyaltyErrors::TransactionExistsForOrder(format!("Transaction already exists for order {}", order_number)));
+            return Err(LoyaltyErrors::TransactionExistsForOrder(format!(
+                "Transaction already exists for order {}",
+                order_number
+            )));
         }
 
         self.current_points = new_points_total;
 
         let transaction = LoyaltyAccountTransaction {
             date: Utc::now(),
-            order_number,
+            order_number: order_number.to_string(),
             change: -spend,
         };
 
@@ -163,6 +172,7 @@ pub struct LoyaltyAccountTransaction {
     pub(crate) change: f32,
 }
 
+#[cfg_attr(any(test, feature = "mocks"), automock)]
 #[async_trait]
 pub(crate) trait LoyaltyPoints {
     async fn new_account(
@@ -172,7 +182,7 @@ pub(crate) trait LoyaltyPoints {
     async fn retrieve(&self, customer_id: &str) -> anyhow::Result<LoyaltyAccount, LoyaltyErrors>;
     async fn add_transaction(
         &self,
-        account: LoyaltyAccount,
+        account: &LoyaltyAccount,
         transaction: LoyaltyAccountTransaction,
     ) -> anyhow::Result<(), LoyaltyErrors>;
 }
@@ -207,7 +217,7 @@ mod tests {
         let mut account = LoyaltyAccount::new(test_customer_id.to_string()).unwrap();
         account.add_transaction("ORD567".to_string(), 100.00);
 
-        account.spend_points("ORD789".to_string(), 10.0);
+        account.spend_points("ORD789", &10.0);
 
         assert_eq!(account.current_points, 40.00);
         assert_eq!(account.transactions().len(), 2);

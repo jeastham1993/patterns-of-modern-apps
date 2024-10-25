@@ -8,8 +8,7 @@ use axum::{
 };
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use loyalty_core::{
-    dd_observability, log_observability, otlp_observability, use_datadog, use_otlp,
-    ApplicationAdpaters, LoyaltyDto,
+    configure_instrumentation, dd_observability, log_observability, otlp_observability, use_datadog, use_otlp, ApplicationAdpaters, LoyaltyDto
 };
 use opentelemetry_sdk::trace::TracerProvider;
 use tracing::{
@@ -43,34 +42,6 @@ async fn main() {
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
-}
-
-fn configure_instrumentation() -> (
-    Option<Result<(), SetGlobalDefaultError>>,
-    Option<TracerProvider>,
-) {
-    let service_name = std::env::var("SERVICE_NAME").unwrap_or("loyalty-web".to_string());
-
-    let mut subscribe: Option<Result<(), SetGlobalDefaultError>> = None;
-    let mut provider: Option<TracerProvider> = None;
-
-    if use_otlp() {
-        println!("Configuring OTLP");
-        let (trace_provider, subscriber) = otlp_observability(&service_name);
-        subscribe = Some(set_global_default(subscriber));
-        provider = Some(trace_provider)
-    } else if use_datadog() {
-        println!("Configuring Datadog");
-        let (trace_provider, dd_subscriber) = dd_observability();
-        subscribe = Some(set_global_default(dd_subscriber));
-        provider = Some(trace_provider);
-    } else {
-        println!("Configuring basic log subscriber");
-        let log_subscriber = log_observability(&service_name);
-        subscribe = Some(set_global_default(log_subscriber));
-    }
-
-    (subscribe, provider)
 }
 
 #[tracing::instrument(name = "get_loyalty_points", skip(state, path))]

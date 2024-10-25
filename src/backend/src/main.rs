@@ -1,14 +1,8 @@
 use axum::http::StatusCode;
 use axum::Router;
 use axum::routing::get;
-use loyalty_core::ApplicationAdpaters;
-use loyalty_core::{
-    dd_observability, log_observability, otlp_observability, use_datadog, use_otlp,
-};
-use opentelemetry_sdk::trace::TracerProvider;
+use loyalty_core::{configure_instrumentation, ApplicationAdpaters};
 use tracing::info;
-use tracing::subscriber::set_global_default;
-use tracing::subscriber::SetGlobalDefaultError;
 
 use adapters::{KafkaConnection, KafkaCredentials};
 use tokio::signal;
@@ -27,10 +21,9 @@ async fn process(receiver: &KafkaConnection, topic: &str) {
     }
 }
 
-//TODO: Update this implementation to dynamically switch to Lambda based on the Lambda runtime environment variables
 #[tokio::main]
 async fn main() {
-    let (subscriber, provider) = configure_instrumentation();
+    let (_subscriber, _provider) = configure_instrumentation();
 
     let username = std::env::var("KAFKA_USERNAME");
     let password = std::env::var("KAFKA_PASSWORD");
@@ -80,32 +73,4 @@ async fn main() {
 
 async fn health() -> StatusCode {
     StatusCode::OK
-}
-
-fn configure_instrumentation() -> (
-    Option<Result<(), SetGlobalDefaultError>>,
-    Option<TracerProvider>,
-) {
-    let service_name = std::env::var("SERVICE_NAME").unwrap_or("loyalty-backend".to_string());
-
-    let mut subscribe: Option<Result<(), SetGlobalDefaultError>> = None;
-    let mut provider: Option<TracerProvider> = None;
-
-    if use_otlp() {
-        println!("Configuring OTLP");
-        let (trace_provider, subscriber) = otlp_observability(&service_name);
-        subscribe = Some(set_global_default(subscriber));
-        provider = Some(trace_provider)
-    } else if use_datadog() {
-        println!("Configuring Datadog");
-        let (trace_provider, dd_subscriber) = dd_observability();
-        subscribe = Some(set_global_default(dd_subscriber));
-        provider = Some(trace_provider);
-    } else {
-        println!("Configuring basic log subscriber");
-        let log_subscriber = log_observability(&service_name);
-        subscribe = Some(set_global_default(log_subscriber));
-    }
-
-    (subscribe, provider)
 }

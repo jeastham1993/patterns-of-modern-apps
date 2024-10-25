@@ -46,16 +46,7 @@ resource "google_cloud_run_v2_service" "loyalty_web" {
         value = "loyalty-web-gcp"
       }
       env {
-        name = "DD_API_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = "projects/854841797518/secrets/dd-api-key"
-            version = "1"
-          }
-        }
-      }
-      env {
-        name  = "DATABASE_URL"
+        name = "DATABASE_URL"
         value_source {
           secret_key_ref {
             secret  = "projects/854841797518/secrets/database_url"
@@ -64,29 +55,9 @@ resource "google_cloud_run_v2_service" "loyalty_web" {
         }
       }
       env {
-        name  = "DD_TRACE_ENABLED"
-        value = "true"
+        name  = "OTLP_ENDPOINT"
+        value = "http://localhost:4317"
       }
-      env {
-        name  = "DD_TRACE_OTEL_ENABLED"
-        value = "true"
-      }
-      env {
-        name  = "DD_LOGS_INJECTION"
-        value = "true"
-      }
-      env {
-        name  = "DD_SITE"
-        value = "datadoghq.eu"
-      }
-      env {
-        name  = "DD_TRACE_PROPAGATION_STYLE"
-        value = "datadog"
-      }
-      # env {
-      #   name  = "OTLP_ENDPOINT"
-      #   value = "http://localhost:4317"
-      # }
       env {
         name  = "GCLOUD_PROJECT_ID"
         value = data.google_project.project.project_id
@@ -100,8 +71,37 @@ resource "google_cloud_run_v2_service" "loyalty_web" {
       }
     }
     containers {
-      image = "docker.io/plantpowerjames/modern-apps-loyalty-web:latest"
-      name = "datadog-agent"
+      name  = "datadog"
+      image = "gcr.io/datadoghq/serverless-init:latest"
+      env {
+        name  = "DD_ENV"
+        value = "dev"
+      }
+      env {
+        name  = "DD_SITE"
+        value = "datadoghq.eu"
+      }
+      env {
+        name = "DD_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = "projects/854841797518/secrets/dd-api-key"
+            version = "1"
+          }
+        }
+      }
+      env {
+        name  = "DD_VERSION"
+        value = "latest"
+      }
+      env {
+        name  = "GCLOUD_PROJECT_ID"
+        value = data.google_project.project.project_id
+      }
+      env {
+        name  = "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT"
+        value = "0.0.0.0:4317"
+      }
     }
   }
 
@@ -136,9 +136,9 @@ data "google_iam_policy" "noauth" {
 }
 
 resource "google_cloud_run_service_iam_policy" "noauth" {
-  location    = google_cloud_run_v2_service.loyalty_web.location
-  project     = google_cloud_run_v2_service.loyalty_web.project
-  service     = google_cloud_run_v2_service.loyalty_web.name
+  location = google_cloud_run_v2_service.loyalty_web.location
+  project  = google_cloud_run_v2_service.loyalty_web.project
+  service  = google_cloud_run_v2_service.loyalty_web.name
 
   policy_data = data.google_iam_policy.noauth.policy_data
 }
@@ -157,16 +157,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         value = "loyalty-backend-gcp"
       }
       env {
-        name = "DD_API_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = "projects/854841797518/secrets/dd-api-key"
-            version = "1"
-          }
-        }
-      }
-      env {
-        name  = "DATABASE_URL"
+        name = "DATABASE_URL"
         value_source {
           secret_key_ref {
             secret  = "projects/854841797518/secrets/database_url"
@@ -175,7 +166,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         }
       }
       env {
-        name  = "BROKER"
+        name = "BROKER"
         value_source {
           secret_key_ref {
             secret  = "projects/854841797518/secrets/kafka_broker"
@@ -188,7 +179,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         value = "loyalty-gcp"
       }
       env {
-        name  = "KAFKA_USERNAME"
+        name = "KAFKA_USERNAME"
         value_source {
           secret_key_ref {
             secret  = "projects/854841797518/secrets/kafka_username"
@@ -197,7 +188,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         }
       }
       env {
-        name  = "KAFKA_PASSWORD"
+        name = "KAFKA_PASSWORD"
         value_source {
           secret_key_ref {
             secret  = "projects/854841797518/secrets/kafka_password"
@@ -206,29 +197,9 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         }
       }
       env {
-        name  = "DD_TRACE_ENABLED"
-        value = "true"
+        name  = "OTLP_ENDPOINT"
+        value = "http://localhost:4317"
       }
-      env {
-        name  = "DD_TRACE_OTEL_ENABLED"
-        value = "true"
-      }
-      env {
-        name  = "DD_LOGS_INJECTION"
-        value = "true"
-      }
-      env {
-        name  = "DD_SITE"
-        value = "datadoghq.eu"
-      }
-      env {
-        name  = "DD_TRACE_PROPAGATION_STYLE"
-        value = "datadog"
-      }
-      # env {
-      #   name  = "OTLP_ENDPOINT"
-      #   value = "http://localhost:4317"
-      # }
       env {
         name  = "GCLOUD_PROJECT_ID"
         value = data.google_project.project.project_id
@@ -241,11 +212,44 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         }
       }
     }
+    containers {
+      name  = "datadog"
+      image = "gcr.io/datadoghq/serverless-init:latest"
+      env {
+        name  = "DD_ENV"
+        value = "dev"
+      }
+      env {
+        name  = "DD_SITE"
+        value = "datadoghq.eu"
+      }
+      env {
+        name = "DD_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = "projects/854841797518/secrets/dd-api-key"
+            version = "1"
+          }
+        }
+      }
+      env {
+        name  = "DD_VERSION"
+        value = "latest"
+      }
+      env {
+        name  = "GCLOUD_PROJECT_ID"
+        value = data.google_project.project.project_id
+      }
+      env {
+        name  = "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT"
+        value = "0.0.0.0:4317"
+      }
+    }
     scaling {
       min_instance_count = 1
       max_instance_count = 2
     }
-    
+
     annotations = {
       "run.googleapis.com/cpu-throttling" = false
     }

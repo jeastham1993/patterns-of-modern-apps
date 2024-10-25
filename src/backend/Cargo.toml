@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 [dependencies]
 loyalty_core = { path = "../core" }
-
 axum = "0.7.7"
 futures = {workspace = true}
 serde_json = {workspace = true}

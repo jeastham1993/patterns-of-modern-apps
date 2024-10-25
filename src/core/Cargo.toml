@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 resolver = "2"
 
+[features]
+mocks = ["dep:mockall"]
+
 [dependencies]
 thiserror = { workspace = true }
 anyhow = { workspace = true }
@@ -41,3 +44,7 @@ opentelemetry-datadog = "^0.11.0"
 tracing-opentelemetry = "^0.24.0"
 reqwest = "0.11.24"
 tracing-bunyan-formatter = "0.3.9"
+mockall = { version = "0.13", optional = true }
+
+[dev-dependencies]
+mockall = "0.13"

@@ -8,7 +8,7 @@ use opentelemetry_sdk::{
     Resource,
 };
 use std::env;
-use tracing::{level_filters::LevelFilter, Subscriber};
+use tracing::{level_filters::LevelFilter, subscriber::{set_global_default, SetGlobalDefaultError}, Subscriber};
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
@@ -23,7 +23,7 @@ pub fn use_otlp() -> bool {
 pub fn dd_observability() -> (TracerProvider, impl Subscriber + Send + Sync) {
     let tracer: opentelemetry_sdk::trace::Tracer = new_pipeline()
         .with_service_name(env::var("DD_SERVICE").expect("DD_SERVICE is not set"))
-        .with_agent_endpoint("http://127.0.0.1:8126")
+        .with_agent_endpoint(env::var("DD_SERVICE_ENDPOINT").unwrap_or("http://127.0.0.1:8126".to_string()))
         .with_trace_config(
             opentelemetry_sdk::trace::config()
                 .with_sampler(opentelemetry_sdk::trace::Sampler::AlwaysOn)
@@ -103,4 +103,32 @@ pub fn log_observability(service_name: &str) -> impl Subscriber + Send + Sync {
         .with(formatting_layer)
         .with(fmt_layer)
         .with(LevelFilter::DEBUG)
+}
+
+pub fn configure_instrumentation() -> (
+    Option<Result<(), SetGlobalDefaultError>>,
+    Option<TracerProvider>,
+) {
+    let service_name = std::env::var("SERVICE_NAME").unwrap_or("loyalty-backend".to_string());
+
+    let mut subscribe: Option<Result<(), SetGlobalDefaultError>> = None;
+    let mut provider: Option<TracerProvider> = None;
+
+    if use_otlp() {
+        println!("Configuring OTLP");
+        let (trace_provider, subscriber) = otlp_observability(&service_name);
+        subscribe = Some(set_global_default(subscriber));
+        provider = Some(trace_provider)
+    } else if use_datadog() {
+        println!("Configuring Datadog");
+        let (trace_provider, dd_subscriber) = dd_observability();
+        subscribe = Some(set_global_default(dd_subscriber));
+        provider = Some(trace_provider);
+    } else {
+        println!("Configuring basic log subscriber");
+        let log_subscriber = log_observability(&service_name);
+        subscribe = Some(set_global_default(log_subscriber));
+    }
+
+    (subscribe, provider)
 }

@@ -123,7 +123,7 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
     #[tracing::instrument(name = "db_add_transaction", skip(self, account, transaction))]
     async fn add_transaction(
         &self,
-        account: LoyaltyAccount,
+        account: &LoyaltyAccount,
         transaction: LoyaltyAccountTransaction,
     ) -> anyhow::Result<(), LoyaltyErrors> {
         info!("Opening DB transaction");

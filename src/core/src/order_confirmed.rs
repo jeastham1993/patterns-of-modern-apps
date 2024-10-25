@@ -54,7 +54,7 @@ impl<T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
         if transaction.is_ok() {
             let update_res = self
                 .loyalty_points
-                .add_transaction(account, transaction.unwrap())
+                .add_transaction(&account, transaction.unwrap())
                 .await;
 
             return match update_res {
