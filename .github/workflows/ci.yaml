@@ -2,6 +2,10 @@ name: ci
 
 on:
   push:
+    paths: 
+      - 'src/**'
+      - 'Dockerfile-web'
+      - 'Dockerfile-backend'
 
 permissions:
   id-token: write
