@@ -23,6 +23,14 @@ jobs:
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Run core library tests
+        shell: bash
+        run: |
+          cargo test --package loyalty_core
       -
         name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -40,7 +48,7 @@ jobs:
           file: Dockerfile-web
           push: true
           tags: plantpowerjames/modern-apps-loyalty-web:${{env.sha_short}}
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64/v8
       -
         name: Build and push backend
         uses: docker/build-push-action@v6
@@ -48,4 +56,4 @@ jobs:
           file: Dockerfile-backend
           push: true
           tags: plantpowerjames/modern-apps-loyalty-backend:${{env.sha_short}}
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64/v8
