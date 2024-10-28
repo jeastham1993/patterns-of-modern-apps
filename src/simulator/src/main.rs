@@ -4,10 +4,10 @@ use rdkafka::{
     ClientConfig,
 };
 use serde::Serialize;
-use uuid::Uuid;
 use std::time::Duration;
 use tokio::signal;
 use tracing::info;
+use uuid::Uuid;
 
 #[derive(Serialize)]
 pub struct OrderConfirmed {
@@ -16,7 +16,7 @@ pub struct OrderConfirmed {
     order_value: f32,
 }
 
-async fn process() {
+async fn product_order_completed_message(customer_ids: Vec<String>) {
     let username = std::env::var("KAFKA_USERNAME");
     let password = std::env::var("KAFKA_PASSWORD");
     let broker = std::env::var("BROKER").expect("Broker should be set");
@@ -43,8 +43,9 @@ async fn process() {
     };
 
     loop {
-        let customer_under_test = format!("test_{}", Uuid::new_v4());
-        info!("Producing for {}", customer_under_test);
+        let customer_id_for_call = rand::thread_rng().gen_range(1..customer_ids.len());
+        let customer = &customer_ids[customer_id_for_call];
+        info!("Producing for {}", customer);
 
         let order_num = rand::thread_rng().gen_range(0..100);
 
@@ -52,7 +53,7 @@ async fn process() {
         let order_value: f32 = order_value_int as f32;
 
         let data = OrderConfirmed {
-            customer_id: customer_under_test,
+            customer_id: customer.clone(),
             order_id: format!("ORD{}", order_num),
             order_value: order_value / 100.00,
         };
@@ -68,6 +69,23 @@ async fn process() {
             )
             .await;
 
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+async fn get_loyalty_points(api_endpoint: &str, customer_ids: Vec<String>) {
+    let client = reqwest::Client::default();
+
+    loop {
+        let customer_id_for_call = rand::thread_rng().gen_range(1..customer_ids.len());
+        let customer = &customer_ids[customer_id_for_call];
+
+        let calling_api_endpoint = format!("{}/loyalty/{}", api_endpoint, customer);
+
+        let res = client.get(calling_api_endpoint).send().await;
+
+        tracing::info!("Get result for {} is ok: {:?}", customer, res.is_ok());
+
         std::thread::sleep(Duration::from_millis(100));
     }
 }
@@ -76,9 +94,20 @@ async fn process() {
 async fn main() {
     tracing_subscriber::fmt().init();
 
+    let lambda_api_endpoint = std::env::var("LAMBDA_API_ENDPOINT").unwrap();
+    let fargate_api_endpoint = std::env::var("FARGATE_API_ENDPOINT").unwrap();
+
     tokio::spawn(async move {
-        process().await;
+        get_loyalty_points(&lambda_api_endpoint, get_customer_list()).await;
     });
+    tokio::spawn(async move {
+        get_loyalty_points(&fargate_api_endpoint, get_customer_list()).await;
+    });
+
+    tokio::spawn(async move {
+        product_order_completed_message(get_customer_list()).await;
+    });
+
     // tokio::spawn(async move {
     //     process().await;
     // });
@@ -99,4 +128,24 @@ async fn main() {
     }
 
     info!("Shutting down");
+}
+
+fn get_customer_list() -> Vec<String> {
+    vec![
+        "james".to_string(),
+        "christina".to_string(),
+        "mark".to_string(),
+        "ruben".to_string(),
+        "rubi".to_string(),
+        "nell".to_string(),
+        "john".to_string(),
+        "jane".to_string(),
+        "janice".to_string(),
+        "paul".to_string(),
+        "chris".to_string(),
+        "scott".to_string(),
+        "luca".to_string(),
+        "roger".to_string(),
+        "florence".to_string(),
+    ]
 }

@@ -3,8 +3,9 @@ use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::{CommitMode, Consumer, ConsumerContext};
+use rdkafka::message::BorrowedMessage;
 use rdkafka::Message;
-use tracing::{info, error};
+use tracing::{error, info};
 
 pub struct CustomContext;
 
@@ -16,7 +17,7 @@ type LoggingConsumer = StreamConsumer<CustomContext>;
 
 pub struct KafkaConnection {
     pub consumer: LoggingConsumer,
-    adapters: ApplicationAdapters
+    adapters: ApplicationAdapters,
 }
 
 pub struct KafkaCredentials {
@@ -30,7 +31,7 @@ impl KafkaConnection {
         broker: String,
         group_id: String,
         credentials: Option<KafkaCredentials>,
-        adapters: ApplicationAdapters
+        adapters: ApplicationAdapters,
     ) -> KafkaConnection {
         let context = CustomContext;
 
@@ -53,47 +54,49 @@ impl KafkaConnection {
                 .expect("Consumer creation failed"),
         };
 
-        Self { consumer: consumer, adapters: adapters }
+        Self {
+            consumer: consumer,
+            adapters: adapters,
+        }
     }
 
-    #[tracing::instrument(name = "process_message", skip(self))]
     pub async fn process(&self) {
         info!("Wait for receive");
-
         match &self.consumer.recv().await {
             Err(e) => tracing::warn!("Kafka error: {}", e),
             Ok(m) => {
                 info!("Received message");
+                let _ = &self.process_message(m).await;
+            }
+        }
+    }
 
-                let payload = match m.payload_view::<str>() {
-                    None => "",
-                    Some(Ok(s)) => s,
-                    Some(Err(e)) => {
-                        tracing::warn!("Error while deserializing message payload: {:?}", e);
-                        ""
+    #[tracing::instrument(name = "process_message", skip(self))]
+    pub async fn process_message(&self, m: &BorrowedMessage<'_>) {
+        let payload = match m.payload_view::<str>() {
+            None => "",
+            Some(Ok(s)) => s,
+            Some(Err(e)) => {
+                tracing::warn!("Error while deserializing message payload: {:?}", e);
+                ""
+            }
+        };
+
+        let evt_payload = serde_json::from_str(&payload);
+
+        match evt_payload {
+            Ok(evt) => {
+                let handle_result = &self.adapters.order_confirmed_handler.handle(evt).await;
+
+                match handle_result {
+                    Ok(_) => {
+                        self.consumer.commit_message(&m, CommitMode::Async).unwrap();
                     }
-                };
-
-                let evt_payload = serde_json::from_str(&payload);
-
-                match evt_payload {
-                    Ok(evt) => {
-                        let handle_result =
-                            &self.adapters.order_confirmed_handler.handle(evt).await;
-
-                        match handle_result {
-                            Ok(_) => {
-                                self.consumer
-                                    .commit_message(&m, CommitMode::Async)
-                                    .unwrap();
-                            }
-                            Err(_) => error!("Failure processing 'OrderConfirmed' event"),
-                        }
-                    }
-                    Err(_) => {
-                        error!("Failure parsing payload to 'OrderConfirmed' event")
-                    }
+                    Err(_) => error!("Failure processing 'OrderConfirmed' event"),
                 }
+            }
+            Err(_) => {
+                error!("Failure parsing payload to 'OrderConfirmed' event")
             }
         }
     }
