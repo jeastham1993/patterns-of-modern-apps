@@ -50,7 +50,7 @@ resource "google_cloud_run_v2_service" "loyalty_web" {
         value_source {
           secret_key_ref {
             secret  = google_secret_manager_secret.database_url.id
-            version = "1"
+            version = google_secret_manager_secret_version.database_url_version.version
           }
         }
       }
@@ -161,7 +161,7 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
         value_source {
           secret_key_ref {
             secret  = google_secret_manager_secret.database_url.id
-            version = "1"
+            version = google_secret_manager_secret_version.database_url_version.version
           }
         }
       }
@@ -283,7 +283,7 @@ resource "google_secret_manager_secret_iam_member" "dd-secret-access" {
 }
 
 resource "google_secret_manager_secret_iam_member" "db-secret-access" {
-  secret_id = google_secret_manager_secret.database_url.secret_id
+  secret_id = google_secret_manager_secret.database_url.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }

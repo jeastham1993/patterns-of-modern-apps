@@ -42,7 +42,7 @@ export class EcsFargateStack extends cdk.Stack {
     const webService = new WebService(this, "LoyaltyWeb", {
       instrumentService: {
         image: ecs.ContainerImage.fromRegistry(
-          "plantpowerjames/modern-apps-loyalty-web:latest"
+          "plantpowerjames/modern-apps-loyalty-web:992e550"
         ),
         serviceName: "loyalty-web-fargate",
         environment: "dev",
@@ -66,7 +66,7 @@ export class EcsFargateStack extends cdk.Stack {
 
     const backendService = new InstrumentedService(this, "LoyaltyBackend", {
       image: ecs.ContainerImage.fromRegistry(
-        "plantpowerjames/modern-apps-loyalty-backend:latest"
+        "plantpowerjames/modern-apps-loyalty-backend:992e550"
       ),
       serviceName: "loyalty-backend-fargate",
       environment: "dev",

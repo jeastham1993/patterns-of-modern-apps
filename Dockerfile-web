@@ -1,7 +1,18 @@
-FROM rust:alpine as builder
+FROM --platform=${BUILDPLATFORM} rust:alpine as builder
+
+ARG TARGETPLATFORM
 
 ENV RUSTFLAGS="-C target-feature=-crt-static"
-RUN apk add pkgconfig openssl-dev libc-dev musl-dev bash alpine-sdk
+RUN apk update && apk add pkgconfig openssl-dev libc-dev musl-dev bash alpine-sdk
+
+COPY ./scripts ./scripts
+
+# The leading '.' passes the environment variable back up to Docker build
+RUN . ./scripts/target.sh rustup target add $RUST_TARGET
+
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc   
+ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
+
 COPY . .
 COPY Cargo.toml Cargo.toml
 

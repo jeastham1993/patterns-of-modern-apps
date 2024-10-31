@@ -177,7 +177,7 @@ resource "azurerm_container_app" "loyalty_backend" {
 
       env {
         name  = "GROUP_ID"
-        value = var.database_url
+        value = "loyalty-azure"
       }
 
       env {

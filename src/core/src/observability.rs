@@ -90,7 +90,7 @@ pub fn otlp_observability(
     )
 }
 
-pub fn log_observability(service_name: &str) -> impl Subscriber + Send + Sync {
+pub fn log_observability() -> impl Subscriber + Send + Sync {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let formatting_layer = BunyanFormattingLayer::new("web".to_string(), std::io::stdout);
     let fmt_layer = tracing_subscriber::fmt::layer()
@@ -126,7 +126,7 @@ pub fn configure_instrumentation() -> (
         provider = Some(trace_provider);
     } else {
         println!("Configuring basic log subscriber");
-        let log_subscriber = log_observability(&service_name);
+        let log_subscriber = log_observability();
         subscribe = Some(set_global_default(log_subscriber));
     }
 

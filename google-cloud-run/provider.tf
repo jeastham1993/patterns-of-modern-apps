@@ -1,7 +1,7 @@
 terraform {
   backend "gcs" {
     bucket = "serverless-sandbox-tfstate"
-    prefix = "terraform/state"
+    prefix = "patterns-of-modern-apps/state"
   }
 }
 
