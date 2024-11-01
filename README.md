@@ -64,6 +64,7 @@ Let's now take a look at how you can run this application:
 
 When you deploy the application to one of the various cloud providers detailed below, you will need to have a Postgres database and a Kafka cluster with a topic called `order-completed`. Of course, you can setup a Kafka cluster and Postgres compatible database in whatever way you choose. However, I'd highly recommend checking out:
 
+- Docker (for local dev)
 - [Neon for Postgres](https://neon.tech/)
 - [Confluent Cloud for Kafka](https://www.confluent.io/)
 - [Momento for caching](https://www.gomomento.com/)
@@ -72,29 +73,60 @@ Confluent, Neon and Momento all have free tiers that you can use to provision **
 
 ## Local
 
-TODO: Add local dev instructions
+You can start up the entire application locally, both for local dev and for running integration tests:
+
+```sh
+# Configure the required environment variable to send OTEL data to Jaeger running locally
+export OTLP_ENDPOINT=http://localhost:4317
+docker-compose up -d
+cargo run --package loyalty-web
+cargo run --package loyalty-backend
+```
+
+Once running locally, you can access the API endpoint on `http://localhost:8080`. There is an additional application in the `src` folder to simulate load against your application. To configure and run:
+
+```sh
+# Set the Kafka broker
+export BROKER=localhost:9092 
+# Set the group ID of your Kafka consumer
+export GROUP_ID=loyalty-local
+
+# Run the load simulator
+cargo run --package order-confirmed-simulator
+```
 
 ## AWS
 
-TODO: Docs on setup
+The various different deployment options use different IaC tools. However, whichever you choose you will always need to set some environment variables on your machine:
+
+```sh
+# The Kafka broker to use when deployed
+export BROKER=
+# The Kafka username
+export KAFKA_USERNAME=
+# The Kafka password
+export KAFKA_PASSWORD=
+# The database URL for the Postgres database in the format 'postgresql://postgres:mysupersecretlocalpassword@localhost/loyalty'
+export DATABASE_URL=
+```
+
+Once the environment variables are set, you can use any of the below deployment methods.
 
 ### Deploy ECS Fargate
 
 ```sh
-cd ecs-fargate
-cdk deploy
+make deploy-ecs
 ```
 
 ### Deploy Lambda
 
 ```sh
-sam build
-sam deploy --guided
+make deploy-lambda
 ```
 
 ## Azure
 
-TODO: Docs on setup
+The Azure Container Apps deployment uses Terraform as the IaC tool. You must create a [dev.tfvars](./azure-container-apps/dev.tfvars) file under `./azure-container-apps/dev.tfvars`.
 
 Create dev.tfvars file
 
@@ -107,32 +139,51 @@ database_url    = ""
 kafka_broker    = ""
 kafka_username  = ""
 kafka_password  = ""
+app_version = "f835e5d"
 ```
 
 Then deploy
 
 ```sh
-cd azure-container-apps
 az login
-terraform init
-terraform apply --var-file dev.tfvars
+make deploy-aca
 ```
 
 ## GCP
 
-TODO: Docs on setup
-
-Uses minimum instances and CPU always on for background processing appplication to allow Kafka consumption.
+The Google Cloud Run deployment uses Terraform as the IaC tool. You must create a [dev.tfvars](./google-cloud-run/dev.tfvars) file under `./azure-container-apps/dev.tfvars`.
 
 ### Cloud Run
 
-```sh
+Create dev.tfvars file
 
+```tf
+live_image_tag = "f835e5d"
+canary_image_tag = ""
+canary_enabled = false
+canary_percent = 10
+force_new_revision = false
+env             = ""
+dd_site         = ""
+dd_api_key      = ""
+kafka_broker    = ""
+kafka_username  = ""
+kafka_password  = ""
+database_url    = ""
+
+```
+
+Then deploy
+
+```sh
+gcloud auth login
+gcloud auth application-default login
+make deploy-cloud-run
 ```
 
 ## Fly.IO
 
-TODO: Docs on setup
+[Fly.IO](https://fly.io) uses a custom CLI tool for deployment First ensure you have [installed the Fly CLI](https://fly.io/docs/flyctl/install/). Then use the below commands to create the application, the secrets for the application and then run the deployment.
 
 ```sh
 fly app create --name loyalty-web
@@ -148,4 +199,11 @@ fly secrets set -a loyalty-backend DATABASE_URL=""
 fly secrets set -a loyalty-backend BROKER=""
 fly secrets set -a loyalty-backend KAFKA_USERNAME=""
 fly secrets set -a loyalty-backend KAFKA_PASSWORD=""
+```
+
+### Deploy
+
+```sh
+fly deploy -c fly-web.toml
+fly deploy -c fly-backend.toml
 ```

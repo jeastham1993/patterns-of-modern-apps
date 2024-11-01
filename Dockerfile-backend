@@ -1,14 +1,12 @@
 FROM --platform=${BUILDPLATFORM} rust:alpine as builder
 
 ARG TARGETPLATFORM
+ARG RUST_TARGET
 
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN apk update && apk add pkgconfig openssl-dev libc-dev musl-dev bash alpine-sdk
 
 COPY ./scripts ./scripts
-
-# The leading '.' passes the environment variable back up to Docker build
-RUN . ./scripts/target.sh rustup target add $RUST_TARGET
 
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc   
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
@@ -16,8 +14,12 @@ ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
 COPY . .
 COPY Cargo.toml Cargo.toml
 
-RUN cargo build --release --package loyalty-backend
-RUN strip target/release/loyalty-backend
+# The leading '.' passes the environment variable back up to Docker build
+RUN . scripts/target.sh && rustup target add $RUST_TARGET
+RUN . scripts/target.sh && echo RUST_TARGET: $RUST_TARGET && cargo fetch --target $RUST_TARGET
+RUN . scripts/target.sh && cargo build --release --target $RUST_TARGET --package loyalty-backend  && cp target/$RUST_TARGET/release/loyalty-backend target/loyalty-backend
+
+RUN strip target/loyalty-backend
 
 FROM alpine:latest
 RUN apk update \
@@ -25,6 +27,6 @@ RUN apk update \
 
 EXPOSE 8080
 
-COPY --from=builder /target/release/loyalty-backend .
+COPY --from=builder /target/loyalty-backend .
 
 ENTRYPOINT ["/loyalty-backend"]

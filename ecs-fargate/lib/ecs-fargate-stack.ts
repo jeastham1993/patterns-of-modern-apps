@@ -18,31 +18,27 @@ export class EcsFargateStack extends cdk.Stack {
       vpc: vpc,
     });
 
-    const databaseUrlParam = StringParameter.fromStringParameterName(
-      this,
-      "DatabaseUrl",
-      "/ModernApps/DatabaseUrl"
-    );
-    const kafkaBroker = StringParameter.fromStringParameterName(
-      this,
-      "KafkaBroker",
-      "/ModernApps/KafkaBroker"
-    );
-    const kafkaUsername = StringParameter.fromStringParameterName(
-      this,
-      "KafkaUsername",
-      "/ModernApps/KafkaUsername"
-    );
-    const kafkaPassword = StringParameter.fromStringParameterName(
-      this,
-      "KafkaPassword",
-      "/ModernApps/KafkaPassword"
-    );
+    const databaseUrlParam = new StringParameter(this, "DatabaseUrlParam", {
+      parameterName: "/loyalty/database-url",
+      stringValue: process.env.DATABASE_URL!
+    });
+    const kafkaBroker = new StringParameter(this, "DatabaseUrlParam", {
+      parameterName: "/loyalty/broker",
+      stringValue: process.env.BROKER!
+    });
+    const kafkaUsername = new StringParameter(this, "DatabaseUrlParam", {
+      parameterName: "/loyalty/kafka-username",
+      stringValue: process.env.KAFKA_USERNAME!
+    });
+    const kafkaPassword = new StringParameter(this, "DatabaseUrlParam", {
+      parameterName: "/loyalty/kafka-password",
+      stringValue: process.env.KAFKA_PASSWORD!
+    });
 
     const webService = new WebService(this, "LoyaltyWeb", {
       instrumentService: {
         image: ecs.ContainerImage.fromRegistry(
-          "plantpowerjames/modern-apps-loyalty-web:992e550"
+          "plantpowerjames/modern-apps-loyalty-web:f835e5d"
         ),
         serviceName: "loyalty-web-fargate",
         environment: "dev",
@@ -66,7 +62,7 @@ export class EcsFargateStack extends cdk.Stack {
 
     const backendService = new InstrumentedService(this, "LoyaltyBackend", {
       image: ecs.ContainerImage.fromRegistry(
-        "plantpowerjames/modern-apps-loyalty-backend:992e550"
+        "plantpowerjames/modern-apps-loyalty-backend:f835e5d"
       ),
       serviceName: "loyalty-backend-fargate",
       environment: "dev",

@@ -81,7 +81,7 @@ export class InstrumentedService extends Construct {
       {
         memoryLimitMiB: 512,
         runtimePlatform: {
-          cpuArchitecture: CpuArchitecture.X86_64,
+          cpuArchitecture: CpuArchitecture.ARM64,
           operatingSystemFamily: OperatingSystemFamily.LINUX,
         },
         executionRole: this.executionRole,

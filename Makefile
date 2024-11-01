@@ -18,7 +18,7 @@ destroy-ecs:
 	cd ecs-fargate;cdk destroy
 
 destroy-lambda:
-	sam destroy
+	sam delete
 
 destroy-cloud-run:
 	cd google-cloud-run;terraform init -reconfigure;terraform destroy --var-file dev.tfvars

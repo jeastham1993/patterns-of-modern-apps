@@ -9,9 +9,9 @@ mod adapters;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let adapters = ApplicationAdapters::new().await;
-
     let (_, _) = configure_instrumentation();
+    
+    let adapters = ApplicationAdapters::new().await;
 
     run(service_fn(|evt| function_handler(evt, &adapters))).await
 }
