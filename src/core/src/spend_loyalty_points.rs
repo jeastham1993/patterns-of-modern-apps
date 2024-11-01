@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::Deserialize;
 
 use crate::{
@@ -13,12 +15,12 @@ pub struct SpendLoyaltyPointsCommand {
     spend: f32,
 }
 
-pub struct SpendLoyaltyPointsCommandHandler<T: LoyaltyPoints> {
-    loyalty_points: T,
+pub struct SpendLoyaltyPointsCommandHandler<T: LoyaltyPoints + 'static> {
+    loyalty_points: Arc<T>,
 }
 
 impl<T: LoyaltyPoints> SpendLoyaltyPointsCommandHandler<T> {
-    pub async fn new(loyalty_points: T) -> Self {
+    pub async fn new(loyalty_points: Arc<T>) -> Self {
         Self { loyalty_points }
     }
 
@@ -61,18 +63,17 @@ mod tests {
             .returning(move |customer_id| {
                 LoyaltyAccount::from(customer_id.to_string(), customer_existing_points, vec![])
             });
-        loyalty_points.expect_add_transaction()
+        loyalty_points
+            .expect_add_transaction()
             .times(1)
-            .returning(|_, _| {
-                Ok(())
-            });
+            .returning(|_, _| Ok(()));
 
         let command = SpendLoyaltyPointsCommand {
             customer_id: test_customer_id.to_string(),
             order_number: "ORD123".to_string(),
             spend: customer_spend,
         };
-        let handler = SpendLoyaltyPointsCommandHandler::new(loyalty_points).await;
+        let handler = SpendLoyaltyPointsCommandHandler::new(Arc::new(loyalty_points)).await;
 
         let result = handler.handle(command).await;
 
@@ -103,7 +104,7 @@ mod tests {
             order_number: "ORD123".to_string(),
             spend: customer_spend,
         };
-        let handler = SpendLoyaltyPointsCommandHandler::new(loyalty_points).await;
+        let handler = SpendLoyaltyPointsCommandHandler::new(Arc::new(loyalty_points)).await;
 
         let result = handler.handle(command).await;
 
@@ -120,9 +121,7 @@ mod tests {
             .expect_retrieve()
             .with(predicate::eq(test_customer_id))
             .times(1)
-            .returning(move |_| {
-                Err(LoyaltyErrors::AccountNotFound())
-            });
+            .returning(move |_| Err(LoyaltyErrors::AccountNotFound()));
         loyalty_points.expect_add_transaction().times(0);
 
         let command = SpendLoyaltyPointsCommand {
@@ -130,7 +129,7 @@ mod tests {
             order_number: "ORD123".to_string(),
             spend: customer_spend,
         };
-        let handler = SpendLoyaltyPointsCommandHandler::new(loyalty_points).await;
+        let handler = SpendLoyaltyPointsCommandHandler::new(Arc::new(loyalty_points)).await;
 
         let result = handler.handle(command).await;
 

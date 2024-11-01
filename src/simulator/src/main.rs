@@ -85,7 +85,7 @@ async fn get_loyalty_points(api_endpoint: &str, customer_ids: Vec<String>) {
 
         // tracing::info!("Get result for {} is ok: {:?}", customer, res.is_ok());
 
-        std::thread::sleep(Duration::from_millis(100));
+        std::thread::sleep(Duration::from_millis(500));
     }
 }
 
@@ -97,16 +97,18 @@ async fn main() {
     let fargate_api_endpoint = std::env::var("FARGATE_API_ENDPOINT");
     let aca_api_endpoint = std::env::var("ACA_API_ENDPOINT");
     let gcp_api_endpoint = std::env::var("GCP_API_ENDPOINT");
+    let kafka_broker = std::env::var("BROKER");
 
     match lambda_api_endpoint {
         Ok(lambda_api_endpoint) => {
             tokio::spawn(async move {
                 get_loyalty_points(&lambda_api_endpoint, get_customer_list()).await;
+                get_loyalty_points(&lambda_api_endpoint, get_customer_list()).await;
             });
         }
         Err(_) => {
             info!("Lambda endpoint not configured")
-        },
+        }
     }
 
     match fargate_api_endpoint {
@@ -117,7 +119,7 @@ async fn main() {
         }
         Err(_) => {
             info!("Fargate endpoint not configured")
-        },
+        }
     }
 
     match aca_api_endpoint {
@@ -128,7 +130,7 @@ async fn main() {
         }
         Err(_) => {
             info!("ACA endpoint not configured")
-        },
+        }
     }
 
     match gcp_api_endpoint {
@@ -139,12 +141,19 @@ async fn main() {
         }
         Err(_) => {
             info!("Google Cloud Run endpoint not configured")
-        },
+        }
     }
 
-    tokio::spawn(async move {
-        product_order_completed_message(get_customer_list()).await;
-    });
+    match kafka_broker {
+        Ok(_) => {
+            tokio::spawn(async move {
+                product_order_completed_message(get_customer_list()).await;
+            });
+        }
+        Err(_) => {
+            info!("Broker not configured, events will not be published")
+        }
+    }
 
     match signal::ctrl_c().await {
         Ok(()) => {

@@ -18,6 +18,10 @@ Parameters:
     Type: String
   KafkaBootstrapServers:
     Type: String
+  MomentoApiKey:
+    Type: String
+  CacheName:
+    Type: String
 
 Globals:
   Function:
@@ -37,6 +41,8 @@ Globals:
         DD_VERSION: !Ref CommitHash
         DD_EXTENSION_VERSION: "next"
         RUST_LOG: "info"
+        MOMENTO_API_KEY: !Ref MomentoApiKey
+        CACHE_NAME: !Ref CacheName
 
 Resources:
   LoyaltyBackend:

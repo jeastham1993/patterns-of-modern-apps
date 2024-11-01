@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::info;
 
@@ -21,7 +21,7 @@ pub enum LoyaltyErrors {
     DatabaseError(String),
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LoyaltyDto {
     pub customer_id: String,
     pub current_points: f32,
@@ -38,6 +38,7 @@ impl From<LoyaltyAccount> for LoyaltyDto {
     }
 }
 
+#[derive(Deserialize, Serialize)]
 pub(crate) struct LoyaltyAccount {
     customer_id: String,
     current_points: f32,
@@ -165,7 +166,7 @@ impl LoyaltyAccount {
     }
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct LoyaltyAccountTransaction {
     pub(crate) date: DateTime<Utc>,
     pub(crate) order_number: String,

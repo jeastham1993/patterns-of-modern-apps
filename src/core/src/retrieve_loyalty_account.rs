@@ -1,11 +1,13 @@
+use std::sync::Arc;
+
 use crate::{loyalty::LoyaltyPoints, LoyaltyDto};
 
-pub struct RetrieveLoyaltyAccountQueryHandler<T: LoyaltyPoints> {
-    loyalty_points: T,
+pub struct RetrieveLoyaltyAccountQueryHandler<T: LoyaltyPoints + 'static> {
+    loyalty_points: Arc<T>,
 }
 
 impl<T: LoyaltyPoints> RetrieveLoyaltyAccountQueryHandler<T> {
-    pub async fn new(loyalty_points: T) -> Self {
+    pub async fn new(loyalty_points: Arc<T>) -> Self {
         Self { loyalty_points }
     }
 

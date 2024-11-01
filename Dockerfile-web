@@ -1,10 +1,10 @@
-FROM --platform=${BUILDPLATFORM} rust:alpine as builder
+FROM --platform=${BUILDPLATFORM} rust:1-alpine3.19 as builder
 
 ARG TARGETPLATFORM
 ARG RUST_TARGET
 
 ENV RUSTFLAGS="-C target-feature=-crt-static"
-RUN apk update && apk add pkgconfig openssl-dev libc-dev musl-dev bash alpine-sdk
+RUN apk update && apk add pkgconfig openssl openssl-dev libc-dev musl-dev bash alpine-sdk
 
 COPY ./scripts ./scripts
 
@@ -21,7 +21,7 @@ RUN . scripts/target.sh && cargo build --release --target $RUST_TARGET --package
 
 RUN strip target/loyalty-web
 
-FROM alpine:latest
+FROM alpine:3.19
 RUN apk update \
     && apk add openssl ca-certificates libgcc
 

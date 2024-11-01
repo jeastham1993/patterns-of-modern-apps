@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::Deserialize;
 use tracing::info;
 
@@ -11,11 +13,11 @@ pub struct OrderConfirmed {
 }
 
 pub struct OrderConfirmedEventHandler<T: LoyaltyPoints> {
-    loyalty_points: T,
+    loyalty_points: Arc<T>,
 }
 
-impl<T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
-    pub async fn new(loyalty_points: T) -> Self {
+impl<'a, T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
+    pub async fn new(loyalty_points: Arc<T>) -> Self {
         Self { loyalty_points }
     }
 
@@ -113,7 +115,7 @@ mod tests {
             order_id: test_order_id.to_string(),
             order_value: test_order_value,
         };
-        let handler = OrderConfirmedEventHandler::new(loyalty_points).await;
+        let handler = OrderConfirmedEventHandler::new(Arc::new(loyalty_points)).await;
 
         let result = handler.handle(evt).await;
 
@@ -142,7 +144,7 @@ mod tests {
             order_id: test_order_id.to_string(),
             order_value: test_order_value,
         };
-        let handler = OrderConfirmedEventHandler::new(loyalty_points).await;
+        let handler = OrderConfirmedEventHandler::new(Arc::new(loyalty_points)).await;
 
         let result = handler.handle(evt).await;
 
