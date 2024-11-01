@@ -4,7 +4,7 @@ ARG TARGETPLATFORM
 ARG RUST_TARGET
 
 ENV RUSTFLAGS="-C target-feature=-crt-static"
-RUN apk update && apk add pkgconfig openssl-dev libc-dev musl-dev bash alpine-sdk
+RUN apk update && apk add pkgconfig openssl-dev libc-dev musl-dev bash alpine-sdk perl
 
 COPY ./scripts ./scripts
 
@@ -21,12 +21,14 @@ RUN . scripts/target.sh && cargo build --release --target $RUST_TARGET --package
 
 RUN strip target/loyalty-backend
 
+FROM builder as dev
+
 FROM alpine:latest
 RUN apk update \
-    && apk add openssl ca-certificates libgcc
+    && apk add openssl ca-certificates libgcc bash
 
 EXPOSE 8080
 
 COPY --from=builder /target/loyalty-backend .
 
-ENTRYPOINT ["/loyalty-backend"]
+ENTRYPOINT ["/bin/bash"]

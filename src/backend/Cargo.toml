@@ -21,4 +21,4 @@ opentelemetry_sdk = { version = "^0.23.0", default-features = false, features = 
 [dependencies.rdkafka]
 version     = "0.36.2"
 default-features = false
-features    = ["tokio", "ssl"]
+features    = ["tokio", "ssl-vendored"]
