@@ -62,14 +62,14 @@ impl LoyaltyAccount {
 
     #[tracing::instrument(name = "new_loyalty_account")]
     pub fn new(customer_id: String) -> anyhow::Result<Self, LoyaltyErrors> {
-        if customer_id.len() == 0 {
+        if customer_id.is_empty() {
             return Err(LoyaltyErrors::InvalidValues(
                 "CustomerID cannot be empty".to_string(),
             ));
         }
 
         Ok(Self {
-            customer_id: customer_id,
+            customer_id,
             current_points: 0.00,
             transactions: vec![],
         })
@@ -80,15 +80,15 @@ impl LoyaltyAccount {
         current_points: f32,
         transactions: Vec<LoyaltyAccountTransaction>,
     ) -> anyhow::Result<Self, LoyaltyErrors> {
-        if customer_id.len() == 0 {
+        if customer_id.is_empty() {
             return Err(LoyaltyErrors::InvalidValues(
                 "CustomerID cannot be empty".to_string(),
             ));
         }
         Ok(Self {
-            customer_id: customer_id,
-            current_points: current_points,
-            transactions: transactions,
+            customer_id,
+            current_points,
+            transactions,
         })
     }
 
@@ -104,7 +104,7 @@ impl LoyaltyAccount {
             .filter(|t| t.order_number == order_number)
             .collect();
 
-        if existing_transactions.len() > 0 {
+        if !existing_transactions.is_empty() {
             info!("Transaction already exists for order {}", order_number);
             return Err(LoyaltyErrors::TransactionExistsForOrder(format!(
                 "Transaction already exists for order {}",
@@ -145,7 +145,7 @@ impl LoyaltyAccount {
             .filter(|t| t.order_number == order_number)
             .collect();
 
-        if existing_transactions.len() > 0 {
+        if !existing_transactions.is_empty() {
             return Err(LoyaltyErrors::TransactionExistsForOrder(format!(
                 "Transaction already exists for order {}",
                 order_number

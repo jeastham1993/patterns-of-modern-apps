@@ -115,7 +115,7 @@ pub fn log_observability() -> impl Subscriber + Send + Sync {
         .with(LevelFilter::DEBUG)
 }
 
-pub fn configure_instrumentation() -> (Option<Result<(), SetGlobalDefaultError>>) {
+pub fn configure_instrumentation() -> Option<Result<(), SetGlobalDefaultError>> {
     let service_name = std::env::var("SERVICE_NAME").unwrap_or("loyalty-backend".to_string());
 
     let mut subscribe: Option<Result<(), SetGlobalDefaultError>> = None;

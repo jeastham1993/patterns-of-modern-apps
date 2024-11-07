@@ -38,17 +38,17 @@ impl<'a, T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
             }
             Err(e) => match e {
                 crate::loyalty::LoyaltyErrors::AccountNotFound() => {
-                    let new_account = self
+                    
+
+                    self
                         .loyalty_points
                         .new_account(evt.customer_id)
                         .await
                         .map_err(|e| {
                             tracing::error!("Failure creating new account: {:?}", e);
 
-                            ()
-                        })?;
-
-                    new_account
+                            
+                        })?
                 }
                 crate::loyalty::LoyaltyErrors::InvalidValues(e)
                 | crate::loyalty::LoyaltyErrors::PointsNotAvailable(e)
@@ -108,7 +108,7 @@ mod tests {
         loyalty_points
             .expect_new_account()
             .times(1)
-            .returning(|customer_id| LoyaltyAccount::new(customer_id));
+            .returning(LoyaltyAccount::new);
 
         let evt = OrderConfirmed {
             customer_id: test_customer_id.to_string(),
@@ -119,7 +119,7 @@ mod tests {
 
         let result = handler.handle(evt).await;
 
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
@@ -148,6 +148,6 @@ mod tests {
 
         let result = handler.handle(evt).await;
 
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
     }
 }

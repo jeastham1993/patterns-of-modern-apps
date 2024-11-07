@@ -30,7 +30,7 @@ async fn main() {
     let app = Router::new()
         .route("/loyalty/:customer_id", get(get_loyalty_points))
         .route("/loyalty/:customer_id/spend", post(spend_loyalty_points))
-        .layer(OtelInResponseLayer::default())
+        .layer(OtelInResponseLayer)
         .layer(OtelAxumLayer::default())
         .with_state(shared_state);
 
@@ -67,7 +67,7 @@ async fn get_loyalty_points(
 #[tracing::instrument(name = "spend_loyalty_points", skip(state, payload), fields(span.kind="server"))]
 async fn spend_loyalty_points(
     State(state): State<Arc<AppState>>,
-    Json(mut payload): Json<SpendLoyaltyPointsCommand>,
+    Json(payload): Json<SpendLoyaltyPointsCommand>,
 ) -> (StatusCode, Json<Option<LoyaltyDto>>) {
     let loyalty_points = state.application.spend_points_handler.handle(payload).await;
 

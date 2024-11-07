@@ -19,7 +19,7 @@ impl<T: LoyaltyPoints> RetrieveLoyaltyAccountQueryHandler<T> {
             .await
             .map_err(|e| {
                 tracing::error!("Failure retrieving loyalty points: {:?}", e);
-                ()
+                
             })?;
 
         Ok(loyalty_points.into())

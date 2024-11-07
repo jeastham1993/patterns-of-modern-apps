@@ -55,8 +55,8 @@ impl KafkaConnection {
         };
 
         Self {
-            consumer: consumer,
-            adapters: adapters,
+            consumer,
+            adapters,
         }
     }
 
@@ -82,7 +82,7 @@ impl KafkaConnection {
             }
         };
 
-        let evt_payload = serde_json::from_str(&payload);
+        let evt_payload = serde_json::from_str(payload);
 
         match evt_payload {
             Ok(evt) => {
@@ -90,7 +90,7 @@ impl KafkaConnection {
 
                 match handle_result {
                     Ok(_) => {
-                        self.consumer.commit_message(&m, CommitMode::Async).unwrap();
+                        self.consumer.commit_message(m, CommitMode::Async).unwrap();
                     }
                     Err(_) => error!("Failure processing 'OrderConfirmed' event"),
                 }

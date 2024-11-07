@@ -108,7 +108,7 @@ mod tests {
 
         let result = handler.handle(command).await;
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -133,6 +133,6 @@ mod tests {
 
         let result = handler.handle(command).await;
 
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
     }
 }

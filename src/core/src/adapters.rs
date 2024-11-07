@@ -1,15 +1,15 @@
 use std::{env, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
-use chrono::{naive::serde, DateTime};
-use momento::{cache::GetResponse, CacheClient, CredentialProvider, MomentoError};
+use chrono::DateTime;
+use momento::{cache::GetResponse, CacheClient, CredentialProvider};
 use sqlx::PgPool;
 use tracing::{info, warn};
 
 use crate::{
     loyalty::{LoyaltyAccount, LoyaltyErrors, LoyaltyPoints},
     spend_loyalty_points::SpendLoyaltyPointsCommandHandler,
-    LoyaltyAccountTransaction, LoyaltyDto, OrderConfirmedEventHandler,
+    LoyaltyAccountTransaction, OrderConfirmedEventHandler,
     RetrieveLoyaltyAccountQueryHandler,
 };
 
@@ -43,7 +43,7 @@ impl ApplicationAdapters {
 
         let loyalty_points = PostgresLoyaltyPoints {
             db: database_pool,
-            cache_client: cache_client,
+            cache_client,
             cache_name: cache_name.unwrap_or("".to_string()),
         };
 
@@ -223,7 +223,7 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
 
         match cache_val {
             Ok(account) => {
-                let parsed_account = serde_json::from_str(&account).unwrap();
+                let parsed_account = serde_json::from_str(account).unwrap();
                 Ok(parsed_account)
             }
             Err(_) => self.db_get(customer_id).await,

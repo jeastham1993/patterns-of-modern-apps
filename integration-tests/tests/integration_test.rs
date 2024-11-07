@@ -55,7 +55,7 @@ async fn when_event_published_points_are_added() {
     let account = serde_json::from_str::<LoyaltyDto>(&body).unwrap();
 
     assert_eq!(account.customer_id, customer_under_test);
-    assert_eq!(account.current_points > 0.0, true);
+    assert!(account.current_points > 0.0);
     assert_eq!(account.transactions.len(), 1);
 
     let spend_points = client
@@ -72,9 +72,8 @@ async fn when_event_published_points_are_added() {
     let account_after_spend = serde_json::from_str::<LoyaltyDto>(&spend_body).unwrap();
 
     assert_eq!(account_after_spend.customer_id, customer_under_test);
-    assert_eq!(
-        account_after_spend.current_points < account.current_points,
-        true
+    assert!(
+        account_after_spend.current_points < account.current_points
     );
     assert_eq!(account_after_spend.transactions.len(), 2);
 }
@@ -112,7 +111,7 @@ async fn produce_event(customer_under_test: &str, order_value: f32) {
     let data = OrderConfirmed {
         customer_id: customer_under_test.to_string(),
         order_id: format!("ORD{}", order_num),
-        order_value: order_value,
+        order_value,
     };
 
     let serialized = serde_json::to_string(&data).unwrap();
