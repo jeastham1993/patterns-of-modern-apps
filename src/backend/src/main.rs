@@ -23,7 +23,7 @@ async fn process(receiver: &KafkaConnection, topic: &str) {
 
 #[tokio::main]
 async fn main() {
-    let (_subscriber, _provider) = configure_instrumentation();
+    let _ = configure_instrumentation();
 
     let username = std::env::var("KAFKA_USERNAME");
     let password = std::env::var("KAFKA_PASSWORD");

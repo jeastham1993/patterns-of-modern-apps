@@ -11,6 +11,7 @@ use loyalty_core::{
     configure_instrumentation, ApplicationAdapters, LoyaltyDto, LoyaltyErrors,
     SpendLoyaltyPointsCommand,
 };
+use tracing::info;
 
 pub struct AppState {
     pub application: Arc<ApplicationAdapters>,
@@ -18,8 +19,7 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() {
-    // initialize tracing
-    let (_provider, _subscriber) = configure_instrumentation();
+    let _ = configure_instrumentation();
 
     let application_adapters = ApplicationAdapters::new().await;
 
@@ -34,7 +34,13 @@ async fn main() {
         .layer(OtelAxumLayer::default())
         .with_state(shared_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    let port = std::env::var("FUNCTIONS_CUSTOMHANDLER_PORT").unwrap_or("8080".to_string());
+
+    info!("Starting application on port {}", port);
+
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
+        .await
+        .unwrap();
     axum::serve(listener, app.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
@@ -58,7 +64,7 @@ async fn get_loyalty_points(
     }
 }
 
-#[tracing::instrument(name = "spend_loyalty_points", skip(state, payload))]
+#[tracing::instrument(name = "spend_loyalty_points", skip(state, payload), fields(span.kind="server"))]
 async fn spend_loyalty_points(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<SpendLoyaltyPointsCommand>,

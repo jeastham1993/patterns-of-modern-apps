@@ -9,7 +9,7 @@ mod adapters;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let (_, _) = configure_instrumentation();
+    let _ = configure_instrumentation();
     
     let adapters = ApplicationAdapters::new().await;
 
