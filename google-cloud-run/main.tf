@@ -55,6 +55,19 @@ resource "google_cloud_run_v2_service" "loyalty_web" {
         }
       }
       env {
+        name  = "MOMENTO_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.momento_api_key.id
+            version = google_secret_manager_secret_version.momento_api_key_version.version
+          }
+        }
+      }
+      env {
+        name  = "CACHE_NAME"
+        value = var.momento_cache_name
+      }
+      env {
         name  = "OTLP_ENDPOINT"
         value = "http://localhost:4317"
       }
@@ -164,6 +177,19 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
             version = google_secret_manager_secret_version.database_url_version.version
           }
         }
+      }
+      env {
+        name  = "MOMENTO_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.momento_api_key.id
+            version = google_secret_manager_secret_version.momento_api_key_version.version
+          }
+        }
+      }
+      env {
+        name  = "CACHE_NAME"
+        value = var.momento_cache_name
       }
       env {
         name = "BROKER"

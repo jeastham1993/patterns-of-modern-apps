@@ -43,6 +43,10 @@ resource "azurerm_container_app" "loyalty_web" {
     name  = "dd-api-key"
     value = var.dd_api_key
   }
+  secret {
+    name  = "momento-api-key"
+    value = var.momento_api_key
+  }
   identity {
     identity_ids = [azurerm_user_assigned_identity.loyalty_app_identity.id]
     type         = "UserAssigned"
@@ -66,6 +70,14 @@ resource "azurerm_container_app" "loyalty_web" {
       env {
         name        = "DATABASE_URL"
         secret_name = "database-url"
+      }
+      env {
+        name        = "MOMENTO_API_KEY"
+        secret_name = "momento-api-key"
+      }
+      env {
+        name  = "CACHE_NAME"
+        value = var.momento_cache_name
       }
       env {
         name  = "OTLP_ENDPOINT"
@@ -144,6 +156,10 @@ resource "azurerm_container_app" "loyalty_backend" {
     name  = "kafka-password"
     value = var.kafka_password
   }
+  secret {
+    name  = "momento-api-key"
+    value = var.momento_api_key
+  }
   identity {
     identity_ids = [azurerm_user_assigned_identity.loyalty_app_identity.id]
     type         = "UserAssigned"
@@ -168,6 +184,14 @@ resource "azurerm_container_app" "loyalty_backend" {
       env {
         name        = "DATABASE_URL"
         secret_name = "database-url"
+      }
+      env {
+        name        = "MOMENTO_API_KEY"
+        secret_name = "momento-api-key"
+      }
+      env {
+        name  = "CACHE_NAME"
+        value = var.momento_cache_name
       }
 
       env {

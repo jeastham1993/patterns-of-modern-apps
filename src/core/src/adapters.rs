@@ -9,8 +9,7 @@ use tracing::{info, warn};
 use crate::{
     loyalty::{LoyaltyAccount, LoyaltyErrors, LoyaltyPoints},
     spend_loyalty_points::SpendLoyaltyPointsCommandHandler,
-    LoyaltyAccountTransaction, OrderConfirmedEventHandler,
-    RetrieveLoyaltyAccountQueryHandler,
+    LoyaltyAccountTransaction, OrderConfirmedEventHandler, RetrieveLoyaltyAccountQueryHandler,
 };
 
 pub struct ApplicationAdapters {
@@ -163,22 +162,7 @@ impl PostgresLoyaltyPoints {
                         loyalty_transactions,
                     )?;
 
-                    match &self.cache_client {
-                        Some(cache_client) => {
-                            match cache_client
-                                .set(
-                                    &self.cache_name,
-                                    customer_id,
-                                    serde_json::to_string(&found_account).unwrap(),
-                                )
-                                .await
-                            {
-                                Ok(_) => info!("Successfully cached"),
-                                Err(e) => tracing::error!("Error: {}", e),
-                            }
-                        }
-                        None => {}
-                    }
+                    let _ = &self.cache_put(&found_account).await;
 
                     Ok(found_account)
                 }

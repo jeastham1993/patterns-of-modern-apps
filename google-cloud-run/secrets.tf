@@ -62,3 +62,16 @@ resource "google_secret_manager_secret_version" "kafka_password_version" {
 
   secret_data = var.kafka_password
 }
+
+resource "google_secret_manager_secret" "momento_api_key" {
+  secret_id = "momento-api-key"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "momento_api_key_version" {
+  secret = google_secret_manager_secret.momento_api_key.id
+
+  secret_data = var.momento_api_key
+}

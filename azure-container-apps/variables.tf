@@ -33,3 +33,13 @@ variable "kafka_password" {
 variable "database_url" {
   type = string
 }
+
+variable "momento_api_key" {
+  type    = string
+  default = ""
+}
+
+variable "momento_cache_name" {
+  type    = string
+  default = ""
+}

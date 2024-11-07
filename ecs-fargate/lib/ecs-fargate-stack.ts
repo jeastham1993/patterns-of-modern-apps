@@ -20,25 +20,29 @@ export class EcsFargateStack extends cdk.Stack {
 
     const databaseUrlParam = new StringParameter(this, "DatabaseUrlParam", {
       parameterName: "/loyalty/database-url",
-      stringValue: process.env.DATABASE_URL!
+      stringValue: process.env.DATABASE_URL!,
     });
     const kafkaBroker = new StringParameter(this, "DatabaseUrlParam", {
       parameterName: "/loyalty/broker",
-      stringValue: process.env.BROKER!
+      stringValue: process.env.BROKER!,
     });
     const kafkaUsername = new StringParameter(this, "DatabaseUrlParam", {
       parameterName: "/loyalty/kafka-username",
-      stringValue: process.env.KAFKA_USERNAME!
+      stringValue: process.env.KAFKA_USERNAME!,
     });
     const kafkaPassword = new StringParameter(this, "DatabaseUrlParam", {
       parameterName: "/loyalty/kafka-password",
-      stringValue: process.env.KAFKA_PASSWORD!
+      stringValue: process.env.KAFKA_PASSWORD!,
+    });
+    const momentoApiKeyParam = new StringParameter(this, "MomentoApiKeyParam", {
+      parameterName: "/loyalty/momento-api-key",
+      stringValue: process.env.MOMENTO_API_KEY ?? "",
     });
 
     const webService = new WebService(this, "LoyaltyWeb", {
       instrumentService: {
         image: ecs.ContainerImage.fromRegistry(
-          "plantpowerjames/modern-apps-loyalty-web:f835e5d"
+          "plantpowerjames/modern-apps-loyalty-web:8c2795e"
         ),
         serviceName: "loyalty-web-fargate",
         environment: "dev",
@@ -51,9 +55,12 @@ export class EcsFargateStack extends cdk.Stack {
             protocol: ecs.Protocol.TCP,
           },
         ],
-        envVariables: {},
+        envVariables: {
+          CACHE_NAME: process.env.CACHE_NAME ?? "",
+        },
         secretVariables: {
           DATABASE_URL: ecs.Secret.fromSsmParameter(databaseUrlParam),
+          MOMENTO_API_KEY: ecs.Secret.fromSsmParameter(momentoApiKeyParam),
         },
       },
     });
@@ -62,7 +69,7 @@ export class EcsFargateStack extends cdk.Stack {
 
     const backendService = new InstrumentedService(this, "LoyaltyBackend", {
       image: ecs.ContainerImage.fromRegistry(
-        "plantpowerjames/modern-apps-loyalty-backend:f835e5d"
+        "plantpowerjames/modern-apps-loyalty-backend:8c2795e"
       ),
       serviceName: "loyalty-backend-fargate",
       environment: "dev",
@@ -72,12 +79,14 @@ export class EcsFargateStack extends cdk.Stack {
       portMappings: undefined,
       envVariables: {
         GROUP_ID: "loyalty-fargate",
+        CACHE_NAME: process.env.CACHE_NAME ?? "",
       },
       secretVariables: {
         DATABASE_URL: ecs.Secret.fromSsmParameter(databaseUrlParam),
         BROKER: ecs.Secret.fromSsmParameter(kafkaBroker),
         KAFKA_USERNAME: ecs.Secret.fromSsmParameter(kafkaUsername),
         KAFKA_PASSWORD: ecs.Secret.fromSsmParameter(kafkaPassword),
+        MOMENTO_API_KEY: ecs.Secret.fromSsmParameter(momentoApiKeyParam),
       },
     });
 

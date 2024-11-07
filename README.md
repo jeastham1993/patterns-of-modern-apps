@@ -27,7 +27,7 @@ I like this definition, but I would add one caveat. Viewing serverless as 'all o
 
 Take a service like Azure Container Apps (ACA). ACA is a container orchestrator that provides an abstraction on top of Kubernetes. You can deploy an application by providing a container image, CPU/memory requirements and scaling behaviour if required. **There is almost 0 operational overhead running an application this way**.
 
-Looking at the Litmus test, this meets the criteria of 1, 3, 4 and 5. 2 gives us nuance. An application running on ACA won't automatically scale to zero; you can configure scaling rules, but it doesn't 'just happen'. When stopped, they don't cost you anything. You pay only when your app is running. But your app is running *all the time* even if no requests are coming in. 
+Looking at the Litmus test, this meets the criteria of 1, 3, 4 and 5. 2 gives us nuance. An application running on ACA won't automatically scale to zero; you can configure scaling rules, but it doesn't 'just happen'. When stopped, they don't cost you anything. You pay only when your app is running. But your app is running _all the time_ even if no requests are coming in.
 
 This application is still serverless. No, it doesn't automatically scale to zero. Yes, you would pay for the application running when no requests are coming in. **But you can deploy an application with next to 0 operational overhead**.
 
@@ -37,15 +37,15 @@ In this repository, I want to demonstrate how to run modern web applications on 
 
 ### What does it mean for you?
 
-If you're a developer, at least anything like me, you want to run your application with as little infrastructure worries as possible. *"Here's my application. It needs this CPU and memory, scale it like this, and frankly, I don't care about anything else."*
+If you're a developer, at least anything like me, you want to run your application with as little infrastructure worries as possible. _"Here's my application. It needs this CPU and memory, scale it like this, and frankly, I don't care about anything else."_
 
-If your company has invested time, energy, and money into building a Kubernetes platform, then great. That can *feel* serverless to you as a developer; leverage it. This isn't to say Kubernetes isn't valuable—it very much is. But it's valuable when your application needs it. 
+If your company has invested time, energy, and money into building a Kubernetes platform, then great. That can _feel_ serverless to you as a developer; leverage it. This isn't to say Kubernetes isn't valuable—it very much is. But it's valuable when your application needs it.
 
 > If your ability to dynamically scale and manage infrastructure is a core differentiator for your business and your customers, great. Go for it. Otherwise, you don't need Kubernetes.
 
 Are you training a machine learning model, doing heavy GPU computation, or ingesting dynamic/large amounts of data? Virtual machines and Kubernetes are probably useful.
 
-The conversation around managed services vs. Kubernetes becomes more interesting when you zoom out and look at the bigger picture. Does your organisation have an excellent reason to invest in building a Kubernetes platform (which is just rebuilding Cloud Run/Fargate/Container Apps)? If you have a good reason to do it (that isn't CV-driven development), then great. 
+The conversation around managed services vs. Kubernetes becomes more interesting when you zoom out and look at the bigger picture. Does your organisation have an excellent reason to invest in building a Kubernetes platform (which is just rebuilding Cloud Run/Fargate/Container Apps)? If you have a good reason to do it (that isn't CV-driven development), then great.
 
 Otherwise, use a managed serverless, be as serverless as possible, and build your application in a way that keeps you portable.
 
@@ -99,7 +99,7 @@ pub(crate) trait LoyaltyPoints {
 
 What benefit does this give you? As you can see in the repository, if you need to port part of the application to a different compute provider... In this case, say it's Lambda, it's as simple as adding a new [entrypoint](./src/backend-lambda/). That single package contains the infrastructure specifics, and then you can simply call the core library.
 
-Similarly, if you needed to switch your database provider (I hope you don't need to), you would need to change `adapters.rs`, and the rest of your code/business logic would stay the same. *I realise this doesn't account for the pain of a data migration*.
+Similarly, if you needed to switch your database provider (I hope you don't need to), you would need to change `adapters.rs`, and the rest of your code/business logic would stay the same. _I realise this doesn't account for the pain of a data migration_.
 
 A well-structured code base that separates applications from infrastructure will help you avoid lock-in. Also, aim for stateless compute.
 
@@ -132,7 +132,7 @@ Once running locally, you can access the API endpoint on `http://localhost:8080`
 
 ```sh
 # Set the Kafka broker
-export BROKER=localhost:9092 
+export BROKER=localhost:9092
 # Set the group ID of your Kafka consumer
 export GROUP_ID=loyalty-local
 
@@ -251,4 +251,52 @@ fly secrets set -a loyalty-backend KAFKA_PASSWORD=""
 ```sh
 fly deploy -c fly-web.toml
 fly deploy -c fly-backend.toml
+```
+
+## Observability
+
+All the sample applications defined here deploy a [Datadog Agent](https://docs.datadoghq.com/agent/?tab=Linux) as a sidecar, or as a Lambda extension. The application itself, is configured to OpenTelemetry compatible data to an endpoint defined by the `OTLP_ENDPOINT` environment variable. If you want to use OpenTelemetry, you can either set the `OTLP_ENDPOINT` environment variable to be a different endpoint, or replace the Datadog sidecar with a full OpenTelemetry collector (or in the case of Lambda, the ADOT collector).
+
+For example, in the Azure Container Apps example you would replace this code with your OTEL collector.
+
+```t
+container {
+       name   = "datadog"
+       image  = "index.docker.io/datadog/serverless-init:latest"
+       cpu    = 0.25
+       memory = "0.5Gi"
+
+       env {
+              name  = "DD_SITE"
+              value = var.dd_site
+       }
+       env {
+              name  = "DD_ENV"
+              value = var.env
+       }
+       env {
+              name        = "DD_API_KEY"
+              secret_name = "dd-api-key"
+       }
+       env {
+              name  = "DD_VERSION"
+              value = var.app_version
+       }
+       env {
+              name  = "DD_AZURE_SUBSCRIPTION_ID"
+              value = data.azurerm_subscription.primary.subscription_id
+       }
+       env {
+              name  = "DD_AZURE_RESOURCE_GROUP"
+              value = azurerm_resource_group.modern_apps_container_apps.name
+       }
+       env {
+              name  = "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT"
+              value = "0.0.0.0:4317"
+       }
+       env {
+              name  = "DD_APM_IGNORE_RESOURCES"
+              value = "/opentelemetry.proto.collector.trace.v1.TraceService/Export$"
+       }
+}
 ```
