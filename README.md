@@ -7,6 +7,7 @@ At their core, modern applications are built of a set of common building blocks.
 - storage (databases, blob storage)
 - integration (queues, topics, buses, streams)
 - caches (because ya'know performance)
+- observability (because ya'know things break)
 
 This repository aims to explore these different building blocks, and the patterns and combinations. And it is going to do all of that using serverless technologies, for all of the different building blocks.
 
