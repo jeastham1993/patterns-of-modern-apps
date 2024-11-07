@@ -61,6 +61,50 @@ The internals of the application are minor; just know that one exposes a web app
 
 Let's now take a look at how you can run this application:
 
+### Code Structure
+
+One of the common pushbacks to adopting serverless technologies, or managed services in general, is the dreaded vendor-lock in. Whilst this is certainly something to consider, all the decisions you make give you a form of lock-in. Building with Rust? Language lock-in. Using MongoDB? Database lock-in. Lock-in is unavoidable. You have control over this as a developer though?
+
+The ports & adapters or hexagaonal architecture programming styles might seem like a lot of ceremony. A lot of additional code you need to write, that adds mis-direction and complexity to your code base. But it is precisely these patterns that help you avoid lock-in. Take the code structure for this application:
+
+```
+- backend
+    - main.rs
+- core
+    - lib.rs
+    - adapters.rs
+    - loyalty.rs
+- web
+    -main.rs
+```
+
+The backend and web directories are the entrypoints for the respective applications. It's these directories that setup the host, configure any host specific stuff (HTTP routes, Kafka connections) and then all they do is call into the `core` library. The core library is split into the main business logic [`loyalty.rs`](./src/core/src/loyalty.rs) and then any [`adapters`](./src/core/src/adapters.rs) that the application might need.
+
+In it's simplest form, the `loyalty.rs` file contains business logic and traits (or interfaces if you're not familiar with Rust). The `adapters` file contains the actual implementation:
+
+```rust
+pub(crate) trait LoyaltyPoints {
+    async fn new_account(
+        &self,
+        customer_id: String,
+    ) -> anyhow::Result<LoyaltyAccount, LoyaltyErrors>;
+    async fn retrieve(&self, customer_id: &str) -> anyhow::Result<LoyaltyAccount, LoyaltyErrors>;
+    async fn add_transaction(
+        &self,
+        account: &LoyaltyAccount,
+        transaction: LoyaltyAccountTransaction,
+    ) -> anyhow::Result<(), LoyaltyErrors>;
+}
+```
+
+What benefit does this give you? Well, as you can see in the repository if you need to port part of the application to a different compute provider... In this case, say it's Lambda, it's as simple as adding a new [entrypoint](./src/backend-lambda/). That single package contains the infrastructure specifics and then you simply call into the core library.
+
+Similarly, if you needed to switch your database provider (I hope you don't need to) you would need to make a change in `adapters.rs` and the rest of your code/business logic would stay the same. *I realise this doesn't account for the pain of a data migration*.
+
+A well structured code base, that seperates application from infrastructure, is what will help you avoid lock-in. That, and aiming for stateless compute.
+
+Right, on to deployment then...
+
 ## Prerequisites
 
 When you deploy the application to one of the various cloud providers detailed below, you will need to have a Postgres database and a Kafka cluster with a topic called `order-completed`. Of course, you can setup a Kafka cluster and Postgres compatible database in whatever way you choose. However, I'd highly recommend checking out:
