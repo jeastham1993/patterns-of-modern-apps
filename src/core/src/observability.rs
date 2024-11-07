@@ -122,15 +122,15 @@ pub fn configure_instrumentation() -> Option<Result<(), SetGlobalDefaultError>> 
 
     if use_otlp() {
         println!("Configuring OTLP");
-        let (trace_provider, subscriber) = otlp_observability(&service_name);
+        let (_, subscriber) = otlp_observability(&service_name);
         subscribe = Some(set_global_default(subscriber));
     } else if use_datadog() {
         println!("Configuring Datadog");
-        let (trace_provider, dd_subscriber) = dd_observability();
+        let (_, dd_subscriber) = dd_observability();
         subscribe = Some(set_global_default(dd_subscriber));
     } else {
         println!("Configuring basic log subscriber");
-        let log_subscriber = log_observability();
+        let _ = log_observability();
     }
 
     subscribe

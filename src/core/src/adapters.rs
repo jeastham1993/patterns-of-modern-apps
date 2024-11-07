@@ -74,7 +74,7 @@ impl PostgresLoyaltyPoints {
                 let get_result = cache_client
                     .get(&self.cache_name, customer_id)
                     .await
-                    .map_err(|e| LoyaltyErrors::AccountNotFound());
+                    .map_err(|_e| LoyaltyErrors::AccountNotFound());
 
                 match get_result {
                     Ok(res) => match res {

@@ -81,7 +81,7 @@ async fn get_loyalty_points(api_endpoint: &str, customer_ids: Vec<String>) {
 
         let calling_api_endpoint = format!("{}/loyalty/{}", api_endpoint, customer);
 
-        let res = client.get(calling_api_endpoint).send().await;
+        let _ = client.get(calling_api_endpoint).send().await;
 
         // tracing::info!("Get result for {} is ok: {:?}", customer, res.is_ok());
 
