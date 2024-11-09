@@ -46,6 +46,8 @@ async fn when_event_published_points_are_added() {
 
     let api_endpoint = std::env::var("API_ENDPOINT").unwrap_or("http://localhost:8080".to_string());
 
+    info!("Querying {}", api_endpoint);
+
     let client = reqwest::Client::new();
 
     let get_points = client
@@ -54,6 +56,7 @@ async fn when_event_published_points_are_added() {
         .await
         .expect("Loyalty Account should exist");
     let body = get_points.text().await.unwrap();
+    info!(body);
     let account = serde_json::from_str::<LoyaltyDto>(&body).unwrap();
 
     assert_eq!(account.customer_id, customer_under_test);
@@ -106,7 +109,7 @@ async fn produce_event(customer_under_test: &str, order_value: f32) {
             .expect("Producer creation failed"),
     };
 
-    info!("Producing");
+    info!("Publishing message");
 
     let order_num = rand::thread_rng().gen_range(0..100);
 
@@ -118,7 +121,7 @@ async fn produce_event(customer_under_test: &str, order_value: f32) {
 
     let serialized = serde_json::to_string(&data).unwrap();
 
-    let _ = producer
+    let res = producer
         .send(
             FutureRecord::to("order-completed")
                 .payload(&serialized)
@@ -126,4 +129,9 @@ async fn produce_event(customer_under_test: &str, order_value: f32) {
             Duration::from_secs(0),
         )
         .await;
+
+    match res {
+        Ok(_) => info!("Publish success"),
+        Err((e, _)) => tracing::error!("Kafka publish failed: {}", e),
+    }
 }

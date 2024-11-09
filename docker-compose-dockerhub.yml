@@ -22,7 +22,7 @@ services:
       - GROUP_ID=loyalty-backend
       - SERVICE_NAME=loyalty-backend-local
       - OTLP_ENDPOINT=http://jaeger:4317
-  
+
   jaeger:
     image: jaegertracing/opentelemetry-all-in-one:latest
     ports:
