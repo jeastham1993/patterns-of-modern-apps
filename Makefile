@@ -10,9 +10,8 @@ run-ci:
 	docker compose -f ./docker-compose-dockerhub.yml up -d
 
 apply-migrations:
-	export DATABASE_URL=postgresql://postgres:mysupersecretlocalpassword@localhost/loyalty
 	sleep 5
-	cd src/core;cargo sqlx migrate run
+	export DATABASE_URL=postgresql://postgres:mysupersecretlocalpassword@localhost/loyalty;cd src/core;cargo sqlx migrate run
 	
 integration-test-run:
 	export BROKER=localhost:9092;cd integration-tests;cargo test
