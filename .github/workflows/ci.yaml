@@ -96,4 +96,4 @@ jobs:
       - name: Run integration tests
         shell: bash
         run: |
-          make integration-test-dockerhub
+          make integration-test-ci
