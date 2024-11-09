@@ -23,7 +23,9 @@ pub struct LoyaltyDto {
     pub current_points: f32,
     pub transactions: Vec<LoyaltyAccountTransaction>,
 }
+
 #[derive(Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct LoyaltyAccountTransaction {
     date: DateTime<Utc>,
     order_number: String,

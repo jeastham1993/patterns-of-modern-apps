@@ -1,4 +1,3 @@
-use std::sync::Arc;
 
 use serde::Deserialize;
 
@@ -27,7 +26,7 @@ impl SpendLoyaltyPointsCommandHandler {
 
         let transaction = account.spend_points(&command.order_number, &command.spend)?;
 
-        let _ = loyalty_points
+        loyalty_points
             .add_transaction(&account, transaction)
             .await?;
 

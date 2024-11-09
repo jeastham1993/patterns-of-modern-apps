@@ -43,7 +43,7 @@ async fn process_message<T: LoyaltyPoints + Send + Sync>(application: &Applicati
     let message_value = ele.value.unwrap();
     let decoded = BASE64_STANDARD.decode(message_value).map_err(|e| {
         tracing::error!("Failure processing message: {}", e);
-        ()
+        
     })?;
     
     let evt_payload = serde_json::from_slice(&decoded);

@@ -40,7 +40,7 @@ impl PostgresLoyaltyPoints {
         Ok(Self {
             db: database_pool,
             cache_client,
-            cache_name: cache_name,
+            cache_name,
         })
     }
 
