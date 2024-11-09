@@ -4,10 +4,10 @@ docker-local:
 run-local: docker-local apply-migrations
 	
 run-local-all:
-	docker-compose -f docker-compose-all.yml up -d
+	docker-compose -f ./docker-compose-all.yml up -d
 
 run-ci:
-	docker-compose -f docker-compose-dockerhub.yml up -d
+	docker-compose -f ./docker-compose-dockerhub.yml up -d
 
 apply-migrations:
 	export DATABASE_URL=postgresql://postgres:mysupersecretlocalpassword@localhost/loyalty
