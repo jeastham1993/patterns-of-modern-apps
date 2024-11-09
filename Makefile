@@ -1,12 +1,12 @@
 docker-local:
 	docker-compose up -d
 
-local: docker-local apply-migrations
+run-local: docker-local apply-migrations
 	
-local-all:
+run-local-all:
 	docker-compose -f docker-compose-all.yml up -d
 
-local-dockerhub:
+run-ci:
 	docker-compose -f docker-compose-dockerhub.yml up -d
 
 apply-migrations:
@@ -18,9 +18,9 @@ integration-test-run:
 	export BROKER=localhost:9092;cd integration-tests;cargo test
 	docker-compose -f docker-compose-all.yml down
 
-integration-test: local-all apply-migrations integration-test-run
+integration-test-local: run-local-all apply-migrations integration-test-run
 
-integration-test-dockerhub: local-dockerhub apply-migrations integration-test-run
+integration-test-ci: run-ci apply-migrations integration-test-run
 
 deploy-ecs:
 	cd ecs-fargate;cdk deploy
