@@ -1,8 +1,6 @@
 services:
   web:
-    build:
-      context: .
-      dockerfile: ./Dockerfile-web
+    image: plantpowerjames/modern-apps-loyalty-web:latest
     container_name: loyalty-web
     depends_on:
       - kafka
@@ -14,9 +12,7 @@ services:
       - OTLP_ENDPOINT=http://jaeger:4317
 
   backend:
-    build:
-      context: .
-      dockerfile: ./Dockerfile-backend
+    image: plantpowerjames/modern-apps-loyalty-backend:latest
     container_name: loyalty-backend
     depends_on:
       - kafka

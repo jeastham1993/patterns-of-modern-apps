@@ -1,5 +1,6 @@
 variable "live_image_tag" {
   type = string
+  default = "latest"
 }
 
 variable "canary_image_tag" {

@@ -11,7 +11,7 @@ export class EcsFargateStack extends cdk.Stack {
     super(scope, id, props);
 
     const vpc = new ec2.Vpc(this, "ModernAppsVpc", {
-      maxAzs: 3, // Default is all AZs in region
+      maxAzs: 3,
     });
 
     const cluster = new ecs.Cluster(this, "LoyaltyCluster", {
@@ -39,10 +39,12 @@ export class EcsFargateStack extends cdk.Stack {
       stringValue: process.env.MOMENTO_API_KEY ?? "",
     });
 
+    const imageTag = process.env.IMAGE_TAG ?? "latest";
+
     const webService = new WebService(this, "LoyaltyWeb", {
       instrumentService: {
         image: ecs.ContainerImage.fromRegistry(
-          "plantpowerjames/modern-apps-loyalty-web:8c2795e"
+          `plantpowerjames/modern-apps-loyalty-web:${imageTag}`
         ),
         serviceName: "loyalty-web-fargate",
         environment: "dev",
@@ -69,7 +71,7 @@ export class EcsFargateStack extends cdk.Stack {
 
     const backendService = new InstrumentedService(this, "LoyaltyBackend", {
       image: ecs.ContainerImage.fromRegistry(
-        "plantpowerjames/modern-apps-loyalty-backend:8c2795e"
+        `plantpowerjames/modern-apps-loyalty-backend:${imageTag}`
       ),
       serviceName: "loyalty-backend-fargate",
       environment: "dev",

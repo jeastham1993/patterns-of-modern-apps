@@ -4,6 +4,7 @@ variable "env" {
 
 variable "app_version" {
   type = string
+  default = "latest"
 }
 
 variable "dd_site" {

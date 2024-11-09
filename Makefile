@@ -1,3 +1,27 @@
+docker-local:
+	docker-compose up -d
+
+local: docker-local apply-migrations
+	
+local-all:
+	docker-compose -f docker-compose-all.yml up -d
+
+local-dockerhub:
+	docker-compose -f docker-compose-dockerhub.yml up -d
+
+apply-migrations:
+	export DATABASE_URL=postgresql://postgres:mysupersecretlocalpassword@localhost/loyalty
+	sleep 5
+	cd src/core;cargo sqlx migrate run
+	
+integration-test-run:
+	export BROKER=localhost:9092;cd integration-tests;cargo test
+	docker-compose -f docker-compose-all.yml down
+
+integration-test: local-all apply-migrations integration-test-run
+
+integration-test-dockerhub: local-dockerhub apply-migrations integration-test-run
+
 deploy-ecs:
 	cd ecs-fargate;cdk deploy
 
