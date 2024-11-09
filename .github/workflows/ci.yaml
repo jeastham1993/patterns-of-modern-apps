@@ -99,5 +99,6 @@ jobs:
           toolchain: stable
       - name: Run integration tests
         shell: bash
+        working-directory: .
         run: |
           make integration-test-ci

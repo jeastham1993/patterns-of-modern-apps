@@ -1,13 +1,13 @@
 docker-local:
-	docker-compose up -d
+	docker compose up -d
 
 run-local: docker-local apply-migrations
 	
 run-local-all:
-	docker-compose -f ./docker-compose-all.yml up -d
+	docker compose -f ./docker-compose-all.yml up -d
 
 run-ci:
-	docker-compose -f ./docker-compose-dockerhub.yml up -d
+	docker compose -f ./docker-compose-dockerhub.yml up -d
 
 apply-migrations:
 	export DATABASE_URL=postgresql://postgres:mysupersecretlocalpassword@localhost/loyalty
@@ -16,7 +16,7 @@ apply-migrations:
 	
 integration-test-run:
 	export BROKER=localhost:9092;cd integration-tests;cargo test
-	docker-compose -f docker-compose-all.yml down
+	docker compose -f docker-compose-all.yml down
 
 integration-test-local: run-local-all apply-migrations integration-test-run
 
