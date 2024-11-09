@@ -57,7 +57,11 @@ async fn main() -> Result<(), anyhow::Error> {
         let app = Router::new()
         .route("/health", get(health));
 
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+        let port = std::env::var("PORT").unwrap_or("8080".to_string());
+
+        info!("Starting application on port {}", port);
+
+        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
         axum::serve(listener, app.into_make_service())
             .await
             .unwrap();

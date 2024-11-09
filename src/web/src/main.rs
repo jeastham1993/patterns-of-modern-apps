@@ -35,7 +35,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .layer(OtelAxumLayer::default())
         .with_state(shared_state);
 
-    let port = std::env::var("FUNCTIONS_CUSTOMHANDLER_PORT").unwrap_or("8080".to_string());
+    let port = std::env::var("PORT").unwrap_or("8080".to_string());
 
     info!("Starting application on port {}", port);
 
