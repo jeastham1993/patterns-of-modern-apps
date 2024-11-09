@@ -7,15 +7,7 @@ edition = "2021"
 loyalty_core = { path = "../core" }
 
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
-serde_json = "1.0"
-tracing-subscriber = "0.3.8"
-tracing-opentelemetry = "^0.24.0"
 tracing = "0.1.40"
-serde = { version = "1.0", features = ["derive"] }
 axum = "0.7.7"
 axum-tracing-opentelemetry = "0.21.1"
 opentelemetry = { version = "^0.23.0", default-features = false, features = ["trace"]}
-opentelemetry_sdk = { version = "^0.23.0", default-features = false, features = [
-    "rt-tokio",
-    "trace",
-] }

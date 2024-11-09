@@ -10,7 +10,6 @@ mocks = ["dep:mockall"]
 [dependencies]
 thiserror = { workspace = true }
 anyhow = { workspace = true }
-futures = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
@@ -30,7 +29,6 @@ sqlx = { version = "0.8", default-features = false, features = [
 opentelemetry = { version = "^0.23.0", default-features = false, features = [
     "trace",
 ] }
-opentelemetry-http = "^0.13.0"
 opentelemetry-otlp = { version = "^0.16.0", features = [
     "http-proto",
     "reqwest-client",
