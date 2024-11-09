@@ -103,6 +103,11 @@ jobs:
         with:
           crate: sqlx-cli
           version: '^0.8' # You can specify any semver range
+      - name: Install prereqs for app
+        shell: bash
+        working-directory: .
+        run: |
+          sudo apt install -y  libsasl2-dev
       - name: Run integration tests
         shell: bash
         working-directory: .
