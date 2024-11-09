@@ -1,4 +1,4 @@
-use loyalty_core::ApplicationAdapters;
+use loyalty_core::{ApplicationAdapters, LoyaltyPoints, OrderConfirmedEventHandler};
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -15,9 +15,9 @@ impl ConsumerContext for CustomContext {}
 
 type LoggingConsumer = StreamConsumer<CustomContext>;
 
-pub struct KafkaConnection {
+pub struct KafkaConnection<T: LoyaltyPoints + Send + Sync> {
     pub consumer: LoggingConsumer,
-    adapters: ApplicationAdapters,
+    adapters: ApplicationAdapters<T>,
 }
 
 pub struct KafkaCredentials {
@@ -25,14 +25,14 @@ pub struct KafkaCredentials {
     pub password: String,
 }
 
-impl KafkaConnection {
+impl<T: LoyaltyPoints + Send + Sync> KafkaConnection<T> {
     #[tracing::instrument(name = "new_kafka_connection", skip(broker, credentials, adapters))]
     pub fn new(
         broker: String,
         group_id: String,
         credentials: Option<KafkaCredentials>,
-        adapters: ApplicationAdapters,
-    ) -> KafkaConnection {
+        adapters: ApplicationAdapters<T>,
+    ) -> KafkaConnection<T> {
         let context = CustomContext;
 
         let consumer: LoggingConsumer = match credentials {
@@ -86,11 +86,11 @@ impl KafkaConnection {
 
         match evt_payload {
             Ok(evt) => {
-                let handle_result = &self.adapters.order_confirmed_handler.handle(evt).await;
+                let handle_result = OrderConfirmedEventHandler::handle(&self.adapters.loyalty_points, evt).await;
 
                 match handle_result {
                     Ok(_) => {
-                        self.consumer.commit_message(m, CommitMode::Async).unwrap();
+                        let _ = self.consumer.commit_message(m, CommitMode::Async);
                     }
                     Err(_) => error!("Failure processing 'OrderConfirmed' event"),
                 }
@@ -109,7 +109,7 @@ impl KafkaConnection {
     }
 }
 
-impl Drop for KafkaConnection {
+impl<T: LoyaltyPoints + Send + Sync> Drop for KafkaConnection<T> {
     fn drop(&mut self) {
         let _ = self.consumer.unassign();
     }

@@ -39,7 +39,7 @@ impl From<LoyaltyAccount> for LoyaltyDto {
 }
 
 #[derive(Deserialize, Serialize)]
-pub(crate) struct LoyaltyAccount {
+pub struct LoyaltyAccount {
     customer_id: String,
     current_points: f32,
     transactions: Vec<LoyaltyAccountTransaction>,
@@ -48,20 +48,16 @@ pub(crate) struct LoyaltyAccount {
 impl LoyaltyAccount {
     const LOYALTY_ACCOUNT_PERCENTAGE: f32 = 0.5;
 
-    pub fn customer_id(&self) -> &str {
+    pub(crate) fn customer_id(&self) -> &str {
         &self.customer_id
     }
 
-    pub fn current_points(&self) -> &f32 {
+    pub(crate) fn current_points(&self) -> &f32 {
         &self.current_points
     }
 
-    pub fn transactions(&self) -> &Vec<LoyaltyAccountTransaction> {
-        &self.transactions
-    }
-
     #[tracing::instrument(name = "new_loyalty_account")]
-    pub fn new(customer_id: String) -> anyhow::Result<Self, LoyaltyErrors> {
+    pub(crate) fn new(customer_id: String) -> anyhow::Result<Self, LoyaltyErrors> {
         if customer_id.is_empty() {
             return Err(LoyaltyErrors::InvalidValues(
                 "CustomerID cannot be empty".to_string(),
@@ -175,7 +171,7 @@ pub struct LoyaltyAccountTransaction {
 
 #[cfg_attr(any(test, feature = "mocks"), automock)]
 #[async_trait]
-pub(crate) trait LoyaltyPoints {
+pub trait LoyaltyPoints {
     async fn new_account(
         &self,
         customer_id: String,
@@ -206,33 +202,33 @@ mod tests {
     fn can_create_loyalty_account_and_add_transaction() {
         let test_customer_id = "test-id";
         let mut account = LoyaltyAccount::new(test_customer_id.to_string()).unwrap();
-        account.add_transaction("ORD567".to_string(), 100.00);
+        let _ = account.add_transaction("ORD567".to_string(), 100.00);
 
         assert_eq!(account.current_points, 50.00);
-        assert_eq!(account.transactions().len(), 1);
+        assert_eq!(account.transactions.len(), 1);
     }
 
     #[test]
     fn can_create_loyalty_account_and_spend_points_when_points_are_available() {
         let test_customer_id = "test-id";
         let mut account = LoyaltyAccount::new(test_customer_id.to_string()).unwrap();
-        account.add_transaction("ORD567".to_string(), 100.00);
+        let _ = account.add_transaction("ORD567".to_string(), 100.00);
 
-        account.spend_points("ORD789", &10.0);
+        let _ = account.spend_points("ORD789", &10.0);
 
         assert_eq!(account.current_points, 40.00);
-        assert_eq!(account.transactions().len(), 2);
+        assert_eq!(account.transactions.len(), 2);
     }
 
     #[test]
     fn can_create_loyalty_account_and_add_same_transaction_should_not_add_points() {
         let test_customer_id = "test-id";
         let mut account = LoyaltyAccount::new(test_customer_id.to_string()).unwrap();
-        account.add_transaction("ORD567".to_string(), 100.00);
-        account.add_transaction("ORD567".to_string(), 100.00);
+        let _ = account.add_transaction("ORD567".to_string(), 100.00);
+        let _ = account.add_transaction("ORD567".to_string(), 100.00);
 
         assert_eq!(account.current_points, 50.00);
-        assert_eq!(account.transactions().len(), 1);
+        assert_eq!(account.transactions.len(), 1);
     }
 
     #[test]
@@ -265,9 +261,10 @@ mod tests {
             transactions.clone(),
         )
         .unwrap();
-        account.add_transaction("ORD567".to_string(), 100.00);
+
+        let _ = account.add_transaction("ORD567".to_string(), 100.00);
 
         assert_eq!(account.current_points, 60.00);
-        assert_eq!(account.transactions().len(), 1);
+        assert_eq!(account.transactions.len(), 1);
     }
 }

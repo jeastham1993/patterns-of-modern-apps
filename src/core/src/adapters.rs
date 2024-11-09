@@ -1,4 +1,4 @@
-use std::{env, sync::Arc, time::Duration};
+use std::{env, time::Duration};
 
 use async_trait::async_trait;
 use chrono::DateTime;
@@ -8,53 +8,18 @@ use tracing::{info, warn};
 
 use crate::{
     loyalty::{LoyaltyAccount, LoyaltyErrors, LoyaltyPoints},
-    spend_loyalty_points::SpendLoyaltyPointsCommandHandler,
-    LoyaltyAccountTransaction, OrderConfirmedEventHandler, RetrieveLoyaltyAccountQueryHandler,
+    LoyaltyAccountTransaction,
 };
 
-pub struct ApplicationAdapters {
-    pub order_confirmed_handler: OrderConfirmedEventHandler<PostgresLoyaltyPoints>,
-    pub retrieve_loyalty_query_handler: RetrieveLoyaltyAccountQueryHandler<PostgresLoyaltyPoints>,
-    pub spend_points_handler: SpendLoyaltyPointsCommandHandler<PostgresLoyaltyPoints>,
+pub struct ApplicationAdapters<T: LoyaltyPoints + Send + Sync> {
+    pub loyalty_points: T,
 }
 
-impl ApplicationAdapters {
-    #[tracing::instrument(name = "new_application_adapters")]
-    pub async fn new() -> Self {
-        let database_pool = PgPool::connect(&env::var("DATABASE_URL").unwrap())
-            .await
-            .unwrap();
-
-        let key = env::var("MOMENTO_API_KEY");
-        let cache_name = env::var("CACHE_NAME");
-
-        let cache_client = match key {
-            Ok(key) => Some(
-                CacheClient::builder()
-                    .default_ttl(Duration::from_secs(600))
-                    .configuration(momento::cache::configurations::Lambda::latest())
-                    .credential_provider(CredentialProvider::from_string(key).unwrap())
-                    .build()
-                    .unwrap(),
-            ),
-            Err(_) => None,
-        };
-
-        let loyalty_points = PostgresLoyaltyPoints {
-            db: database_pool,
-            cache_client,
-            cache_name: cache_name.unwrap_or("".to_string()),
-        };
-
-        let arc_loyalty = Arc::new(loyalty_points);
-
+impl<T: LoyaltyPoints + Send + Sync> ApplicationAdapters<T> {
+    #[tracing::instrument(name = "new_application_adapters", skip(loyalty))]
+    pub async fn new(loyalty: T) -> Self {
         Self {
-            order_confirmed_handler: OrderConfirmedEventHandler::new(arc_loyalty.clone()).await,
-            retrieve_loyalty_query_handler: RetrieveLoyaltyAccountQueryHandler::new(
-                arc_loyalty.clone(),
-            )
-            .await,
-            spend_points_handler: SpendLoyaltyPointsCommandHandler::new(arc_loyalty.clone()).await,
+            loyalty_points: loyalty,
         }
     }
 }
@@ -66,6 +31,49 @@ pub struct PostgresLoyaltyPoints {
 }
 
 impl PostgresLoyaltyPoints {
+    pub async fn new() -> Result<Self, anyhow::Error> {
+        let db_url = &env::var("DATABASE_URL")?;
+        let database_pool = PgPool::connect(db_url).await?;
+
+        let (cache_client, cache_name) = PostgresLoyaltyPoints::configure_cache_client().await;
+
+        Ok(Self {
+            db: database_pool,
+            cache_client,
+            cache_name: cache_name,
+        })
+    }
+
+    async fn configure_cache_client() -> (Option<CacheClient>, String) {
+        let key = env::var("MOMENTO_API_KEY");
+        let cache_name = env::var("CACHE_NAME").unwrap_or(String::from(""));
+
+        let cache_client = match key {
+            Ok(key) => {
+                let credential_provider = CredentialProvider::from_string(key);
+
+                match credential_provider {
+                    Ok(credential_provider) => {
+                        let client = CacheClient::builder()
+                            .default_ttl(Duration::from_secs(600))
+                            .configuration(momento::cache::configurations::Lambda::latest())
+                            .credential_provider(credential_provider)
+                            .build();
+
+                        match client {
+                            Ok(client) => Some(client),
+                            Err(_) => None,
+                        }
+                    }
+                    Err(_) => None,
+                }
+            }
+            Err(_) => None,
+        };
+
+        (cache_client, cache_name)
+    }
+
     #[tracing::instrument(name = "cache_get", skip(self))]
     async fn cache_get(&self, customer_id: &str) -> Result<String, ()> {
         match &self.cache_client {
@@ -100,11 +108,13 @@ impl PostgresLoyaltyPoints {
     async fn cache_put(&self, account: &LoyaltyAccount) {
         match &self.cache_client {
             Some(cache_client) => {
+                let cache_data = serde_json::to_string(account).unwrap_or(String::from(""));
+
                 match cache_client
                     .set(
                         &self.cache_name,
                         account.customer_id(),
-                        serde_json::to_string(account).unwrap(),
+                        cache_data,
                     )
                     .await
                 {

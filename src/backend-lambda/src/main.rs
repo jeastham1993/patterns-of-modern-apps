@@ -1,56 +1,72 @@
-use loyalty_core::{configure_instrumentation, ApplicationAdapters};
+use loyalty_core::{configure_instrumentation, ApplicationAdapters, LoyaltyPoints, OrderConfirmedEventHandler, PostgresLoyaltyPoints};
 use tracing::info;
 
 use aws_lambda_events::kafka::{KafkaEvent, KafkaRecord};
 use base64::prelude::*;
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 
-mod adapters;
-
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let _ = configure_instrumentation();
+
+    let postgres_loyalty = PostgresLoyaltyPoints::new().await?;
     
-    let adapters = ApplicationAdapters::new().await;
+    let adapters = ApplicationAdapters::new(postgres_loyalty).await;
 
     run(service_fn(|evt| function_handler(evt, &adapters))).await
 }
 
-async fn function_handler(
+async fn function_handler<T: LoyaltyPoints + Send + Sync>(
     event: LambdaEvent<KafkaEvent>,
-    adapters: &ApplicationAdapters,
+    adapters: &ApplicationAdapters<T>,
 ) -> Result<(), Error> {
     for (_, val) in event.payload.records {
         for ele in val {
-            process_message(adapters, ele).await
+            let _ = process_message(adapters, ele).await;
+
+            // TODO: Implement dead letter handling
+            // Current implementation will move forward IF a message can't be processed. There is no way
+            // currently with the Kafka<>Lambda integration to batch 'success' messages. If there is an error
+            // the problematic message should be moved to a seperate persistence store. SQS?
         }
     }
 
     Ok(())
 }
 
-#[tracing::instrument(name = "process_message", skip(adapters, ele))]
-async fn process_message(adapters: &ApplicationAdapters, ele: KafkaRecord) {
-    let decoded = BASE64_STANDARD.decode(ele.value.unwrap()).unwrap();
-    info!(
-        "Decoded payload: {}",
-        String::from_utf8(decoded.clone()).unwrap()
-    );
+#[tracing::instrument(name = "process_message", skip(application, ele))]
+async fn process_message<T: LoyaltyPoints + Send + Sync>(application: &ApplicationAdapters<T>, ele: KafkaRecord) -> Result<(), ()> {
+    if ele.value.is_none() {
+        return Ok(())
+    }
+
+    let message_value = ele.value.unwrap();
+    let decoded = BASE64_STANDARD.decode(message_value).map_err(|e| {
+        tracing::error!("Failure processing message: {}", e);
+        ()
+    })?;
+    
     let evt_payload = serde_json::from_slice(&decoded);
 
     match evt_payload {
         Ok(evt) => {
-            let handle_result = adapters.order_confirmed_handler.handle(evt).await;
+            let handle_result = OrderConfirmedEventHandler::handle(&application.loyalty_points, evt).await;
 
             match handle_result {
                 Ok(_) => {
-                    info!("Processed successfully")
+                    info!("Processed successfully");
+
+                    Ok(())
                 }
-                Err(_) => tracing::error!("Failure processing 'OrderConfirmed' event"),
+                Err(_) => {
+                    tracing::error!("Failure processing 'OrderConfirmed' event");
+                    Err(())
+                },
             }
         }
         Err(_) => {
-            tracing::error!("Failure parsing payload to 'OrderConfirmed' event")
+            tracing::error!("Failure parsing payload to 'OrderConfirmed' event");
+            Err(())
         }
     }
 }

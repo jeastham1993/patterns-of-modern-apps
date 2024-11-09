@@ -8,23 +8,24 @@ use axum::{
 };
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use loyalty_core::{
-    configure_instrumentation, ApplicationAdapters, LoyaltyDto, LoyaltyErrors,
-    SpendLoyaltyPointsCommand,
+    configure_instrumentation, ApplicationAdapters, LoyaltyDto, LoyaltyErrors, LoyaltyPoints, PostgresLoyaltyPoints, RetrieveLoyaltyAccountQueryHandler, SpendLoyaltyPointsCommand, SpendLoyaltyPointsCommandHandler
 };
 use tracing::info;
 
-pub struct AppState {
-    pub application: Arc<ApplicationAdapters>,
+pub struct AppState<T: LoyaltyPoints + Send + Sync> {
+    pub application: ApplicationAdapters<T>,
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), anyhow::Error> {
     let _ = configure_instrumentation();
 
-    let application_adapters = ApplicationAdapters::new().await;
+    let database = PostgresLoyaltyPoints::new().await?;
+
+    let application_adapters = ApplicationAdapters::new(database).await;
 
     let shared_state = Arc::new(AppState {
-        application: Arc::new(application_adapters),
+        application: application_adapters,
     });
 
     let app = Router::new()
@@ -41,22 +42,21 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
         .await
         .unwrap();
+
     axum::serve(listener, app.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
+
+    Ok(())
 }
 
 #[tracing::instrument(name = "get_loyalty_points", skip(state, path))]
-async fn get_loyalty_points(
-    State(state): State<Arc<AppState>>,
+async fn get_loyalty_points<T: LoyaltyPoints + Send + Sync>(
+    State(state): State<Arc<AppState<T>>>,
     path: Path<String>,
 ) -> (StatusCode, Json<Option<LoyaltyDto>>) {
-    let loyalty_points = state
-        .application
-        .retrieve_loyalty_query_handler
-        .handle(path.0)
-        .await;
+    let loyalty_points = RetrieveLoyaltyAccountQueryHandler::handle(&state.application.loyalty_points, path.0).await;
 
     match loyalty_points {
         Ok(loyalty) => (StatusCode::OK, (Json(Some(loyalty)))),
@@ -65,11 +65,11 @@ async fn get_loyalty_points(
 }
 
 #[tracing::instrument(name = "spend_loyalty_points", skip(state, payload), fields(span.kind="server"))]
-async fn spend_loyalty_points(
-    State(state): State<Arc<AppState>>,
+async fn spend_loyalty_points<T: LoyaltyPoints + Send + Sync>(
+    State(state): State<Arc<AppState<T>>>,
     Json(payload): Json<SpendLoyaltyPointsCommand>,
 ) -> (StatusCode, Json<Option<LoyaltyDto>>) {
-    let loyalty_points = state.application.spend_points_handler.handle(payload).await;
+    let loyalty_points = SpendLoyaltyPointsCommandHandler::handle(&state.application.loyalty_points, payload).await;
 
     match loyalty_points {
         Ok(account) => (StatusCode::OK, (Json(Some(account)))),

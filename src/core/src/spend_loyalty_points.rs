@@ -15,26 +15,19 @@ pub struct SpendLoyaltyPointsCommand {
     spend: f32,
 }
 
-pub struct SpendLoyaltyPointsCommandHandler<T: LoyaltyPoints + 'static> {
-    loyalty_points: Arc<T>,
-}
+pub struct SpendLoyaltyPointsCommandHandler;
 
-impl<T: LoyaltyPoints> SpendLoyaltyPointsCommandHandler<T> {
-    pub async fn new(loyalty_points: Arc<T>) -> Self {
-        Self { loyalty_points }
-    }
-
-    #[tracing::instrument(name = "handle_spend_loyalty_points", skip(self, command), fields(customer_id=command.customer_id, order_number=command.order_number, spend=command.spend))]
-    pub async fn handle(
-        &self,
+impl SpendLoyaltyPointsCommandHandler {
+    #[tracing::instrument(name = "handle_spend_loyalty_points", skip(loyalty_points, command), fields(customer_id=command.customer_id, order_number=command.order_number, spend=command.spend))]
+    pub async fn handle<T: LoyaltyPoints>(
+        loyalty_points: &T, 
         command: SpendLoyaltyPointsCommand,
     ) -> anyhow::Result<LoyaltyDto, LoyaltyErrors> {
-        let mut account = self.loyalty_points.retrieve(&command.customer_id).await?;
+        let mut account = loyalty_points.retrieve(&command.customer_id).await?;
 
         let transaction = account.spend_points(&command.order_number, &command.spend)?;
 
-        let _ = &self
-            .loyalty_points
+        let _ = loyalty_points
             .add_transaction(&account, transaction)
             .await?;
 
@@ -73,9 +66,8 @@ mod tests {
             order_number: "ORD123".to_string(),
             spend: customer_spend,
         };
-        let handler = SpendLoyaltyPointsCommandHandler::new(Arc::new(loyalty_points)).await;
 
-        let result = handler.handle(command).await;
+        let result = SpendLoyaltyPointsCommandHandler::handle(&loyalty_points, command).await;
 
         let account = result.unwrap();
 
@@ -104,9 +96,8 @@ mod tests {
             order_number: "ORD123".to_string(),
             spend: customer_spend,
         };
-        let handler = SpendLoyaltyPointsCommandHandler::new(Arc::new(loyalty_points)).await;
 
-        let result = handler.handle(command).await;
+        let result = SpendLoyaltyPointsCommandHandler::handle(&loyalty_points, command).await;
 
         assert!(result.is_err());
     }
@@ -129,9 +120,8 @@ mod tests {
             order_number: "ORD123".to_string(),
             spend: customer_spend,
         };
-        let handler = SpendLoyaltyPointsCommandHandler::new(Arc::new(loyalty_points)).await;
-
-        let result = handler.handle(command).await;
+        
+        let result = SpendLoyaltyPointsCommandHandler::handle(&loyalty_points, command).await;
 
         assert!(result.is_err());
     }

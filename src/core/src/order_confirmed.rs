@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use serde::Deserialize;
 use tracing::info;
 
@@ -12,23 +10,17 @@ pub struct OrderConfirmed {
     order_value: f32,
 }
 
-pub struct OrderConfirmedEventHandler<T: LoyaltyPoints> {
-    loyalty_points: Arc<T>,
-}
+pub struct OrderConfirmedEventHandler {}
 
-impl<'a, T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
-    pub async fn new(loyalty_points: Arc<T>) -> Self {
-        Self { loyalty_points }
-    }
-
-    #[tracing::instrument(name = "handle_order_confirmed",skip(self, evt), fields(customer_id=evt.customer_id, order_id=evt.order_id, order_value=evt.order_value))]
-    pub async fn handle(&self, evt: OrderConfirmed) -> Result<(), ()> {
+impl OrderConfirmedEventHandler {
+    #[tracing::instrument(name = "handle_order_confirmed",skip(loyalty_points, evt), fields(customer_id=evt.customer_id, order_id=evt.order_id, order_value=evt.order_value))]
+    pub async fn handle<T: LoyaltyPoints>(loyalty_points: &T, evt: OrderConfirmed) -> Result<(), ()> {
         info!(
             "Processing message for customer {} with id {} and value {}",
             evt.customer_id, evt.order_id, evt.order_value
         );
 
-        let existing_account = self.loyalty_points.retrieve(&evt.customer_id).await;
+        let existing_account = loyalty_points.retrieve(&evt.customer_id).await;
 
         let mut account = match existing_account {
             Ok(account) => {
@@ -38,10 +30,7 @@ impl<'a, T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
             }
             Err(e) => match e {
                 crate::loyalty::LoyaltyErrors::AccountNotFound() => {
-                    
-
-                    self
-                        .loyalty_points
+                        loyalty_points
                         .new_account(evt.customer_id)
                         .await
                         .map_err(|e| {
@@ -64,8 +53,7 @@ impl<'a, T: LoyaltyPoints> OrderConfirmedEventHandler<T> {
         let transaction = account.add_transaction(evt.order_id, evt.order_value);
 
         if transaction.is_ok() {
-            let update_res = self
-                .loyalty_points
+            let update_res = loyalty_points
                 .add_transaction(&account, transaction.unwrap())
                 .await;
 
@@ -115,9 +103,8 @@ mod tests {
             order_id: test_order_id.to_string(),
             order_value: test_order_value,
         };
-        let handler = OrderConfirmedEventHandler::new(Arc::new(loyalty_points)).await;
 
-        let result = handler.handle(evt).await;
+        let result = OrderConfirmedEventHandler::handle(&loyalty_points, evt).await;
 
         assert!(result.is_ok());
     }
@@ -144,9 +131,8 @@ mod tests {
             order_id: test_order_id.to_string(),
             order_value: test_order_value,
         };
-        let handler = OrderConfirmedEventHandler::new(Arc::new(loyalty_points)).await;
 
-        let result = handler.handle(evt).await;
+        let result = OrderConfirmedEventHandler::handle(&loyalty_points, evt).await;
 
         assert!(result.is_ok());
     }

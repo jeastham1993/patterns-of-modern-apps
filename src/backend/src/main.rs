@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
 use axum::Router;
 use axum::routing::get;
-use loyalty_core::{configure_instrumentation, ApplicationAdapters};
+use loyalty_core::{configure_instrumentation, ApplicationAdapters, LoyaltyPoints, PostgresLoyaltyPoints};
 use tracing::info;
 
 use adapters::{KafkaConnection, KafkaCredentials};
@@ -9,7 +9,7 @@ use tokio::signal;
 
 mod adapters;
 
-async fn process(receiver: &KafkaConnection, topic: &str) {
+async fn process<T: LoyaltyPoints + Send + Sync>(receiver: &KafkaConnection<T>, topic: &str) {
     info!("Subscribing");
 
     receiver.subscribe(topic).await;
@@ -22,11 +22,13 @@ async fn process(receiver: &KafkaConnection, topic: &str) {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), anyhow::Error> {
     let _ = configure_instrumentation();
 
     let username = std::env::var("KAFKA_USERNAME");
     let password = std::env::var("KAFKA_PASSWORD");
+    let broker = std::env::var("BROKER").expect("'BROKER' environment variable is not set");
+    let group_id = std::env::var("GROUP_ID").expect("'GROUP_ID' environment variable is not set");
 
     let credentials = match username {
         Ok(user) => Some(KafkaCredentials {
@@ -36,11 +38,13 @@ async fn main() {
         Err(_) => None,
     };
 
-    let application_adapters = ApplicationAdapters::new().await;
+    let database = PostgresLoyaltyPoints::new().await?;
+
+    let application_adapters = ApplicationAdapters::new(database).await;
 
     let connection = KafkaConnection::new(
-        std::env::var("BROKER").unwrap(),
-        std::env::var("GROUP_ID").unwrap(),
+        broker,
+        group_id,
         credentials,
         application_adapters,
     );
@@ -66,9 +70,11 @@ async fn main() {
         Err(err) => {
             eprintln!("Unable to listen for shutdown signal: {}", err);
         }
-    }
+    };
 
     info!("Shutting down");
+
+    Ok(())
 }
 
 async fn health() -> StatusCode {

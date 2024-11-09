@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 loyalty_core = { path = "../core" }
 
+anyhow = { workspace = true }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
 tracing = "0.1.40"
 axum = "0.7.7"
