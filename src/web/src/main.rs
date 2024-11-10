@@ -7,10 +7,12 @@ use axum::{
     Json, Router,
 };
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
+use lambda_http::run;
 use loyalty_core::{
-    configure_instrumentation, ApplicationAdapters, LoyaltyDto, LoyaltyErrors, LoyaltyPoints, PostgresLoyaltyPoints, RetrieveLoyaltyAccountQueryHandler, SpendLoyaltyPointsCommand, SpendLoyaltyPointsCommandHandler
+    configure_instrumentation, ApplicationAdapters, LoyaltyDto, LoyaltyErrors, LoyaltyPoints,
+    PostgresLoyaltyPoints, RetrieveLoyaltyAccountQueryHandler, SpendLoyaltyPointsCommand,
+    SpendLoyaltyPointsCommandHandler,
 };
-use tracing::info;
 
 pub struct AppState<T: LoyaltyPoints + Send + Sync> {
     pub application: ApplicationAdapters<T>,
@@ -35,18 +37,26 @@ async fn main() -> Result<(), anyhow::Error> {
         .layer(OtelAxumLayer::default())
         .with_state(shared_state);
 
-    let port = std::env::var("PORT").unwrap_or("8080".to_string());
+    // If the app is running on Lambda the `LAMBDA_TASK_ROOT` env var will be set
+    match std::env::var("LAMBDA_TASK_ROOT") {
+        Ok(_) => {
+            let _ = run(app).await;
+        }
+        Err(_) => {
+            let port = std::env::var("PORT").unwrap_or("8080".to_string());
 
-    info!("Starting application on port {}", port);
+            tracing::info!("Starting application on port {}", port);
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
-        .await
-        .unwrap();
+            let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
+                .await
+                .unwrap();
 
-    axum::serve(listener, app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .unwrap();
+            axum::serve(listener, app.into_make_service())
+                .with_graceful_shutdown(shutdown_signal())
+                .await
+                .unwrap();
+        }
+    }
 
     Ok(())
 }
@@ -56,7 +66,8 @@ async fn get_loyalty_points<T: LoyaltyPoints + Send + Sync>(
     State(state): State<Arc<AppState<T>>>,
     path: Path<String>,
 ) -> (StatusCode, Json<Option<LoyaltyDto>>) {
-    let loyalty_points = RetrieveLoyaltyAccountQueryHandler::handle(&state.application.loyalty_points, path.0).await;
+    let loyalty_points =
+        RetrieveLoyaltyAccountQueryHandler::handle(&state.application.loyalty_points, path.0).await;
 
     match loyalty_points {
         Ok(loyalty) => (StatusCode::OK, (Json(Some(loyalty)))),
@@ -69,7 +80,8 @@ async fn spend_loyalty_points<T: LoyaltyPoints + Send + Sync>(
     State(state): State<Arc<AppState<T>>>,
     Json(payload): Json<SpendLoyaltyPointsCommand>,
 ) -> (StatusCode, Json<Option<LoyaltyDto>>) {
-    let loyalty_points = SpendLoyaltyPointsCommandHandler::handle(&state.application.loyalty_points, payload).await;
+    let loyalty_points =
+        SpendLoyaltyPointsCommandHandler::handle(&state.application.loyalty_points, payload).await;
 
     match loyalty_points {
         Ok(account) => (StatusCode::OK, (Json(Some(account)))),

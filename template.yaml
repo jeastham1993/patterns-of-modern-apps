@@ -105,7 +105,6 @@ Resources:
         AuthType:  NONE
         InvokeMode: BUFFERED
       Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:753240598075:layer:LambdaAdapterLayerArm64:23
         - !Sub arn:aws:lambda:${AWS::Region}:464622532012:layer:Datadog-Extension-ARM:65
 
   OrderCompletedKafkaDLQ:
