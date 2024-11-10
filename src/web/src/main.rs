@@ -15,6 +15,37 @@ use loyalty_core::{
 };
 use tracing::info;
 
+pub enum HostingOption {
+    Lambda,
+    HttpServer,
+}
+
+impl HostingOption {
+    async fn run(&self, app: Router) {
+        match self {
+            HostingOption::Lambda => {
+                info!("Starting app using Lambda runtime and `lambda_http` crate.");
+
+                let _ = run(app).await;
+            }
+            HostingOption::HttpServer => {
+                let port = std::env::var("PORT").unwrap_or("8080".to_string());
+
+                tracing::info!("Starting web server on port {}", port);
+
+                let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
+                    .await
+                    .unwrap();
+
+                axum::serve(listener, app.into_make_service())
+                    .with_graceful_shutdown(shutdown_signal())
+                    .await
+                    .unwrap();
+            }
+        }
+    }
+}
+
 pub struct AppState<T: LoyaltyPoints + Send + Sync> {
     pub application: ApplicationAdapters<T>,
 }
@@ -38,28 +69,8 @@ async fn main() -> Result<(), anyhow::Error> {
         .layer(OtelAxumLayer::default())
         .with_state(shared_state);
 
-    // If the app is running on Lambda the `LAMBDA_TASK_ROOT` env var will be set
-    match std::env::var("LAMBDA_TASK_ROOT") {
-        Ok(_) => {
-            info!("Starting app using Lambda runtime and `lambda_http` crate.");
-
-            let _ = run(app).await;
-        }
-        Err(_) => {
-            let port = std::env::var("PORT").unwrap_or("8080".to_string());
-
-            tracing::info!("Starting web server on port {}", port);
-
-            let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
-                .await
-                .unwrap();
-
-            axum::serve(listener, app.into_make_service())
-                .with_graceful_shutdown(shutdown_signal())
-                .await
-                .unwrap();
-        }
-    }
+    let hosting = get_hosting_option();
+    hosting.run(app).await;
 
     Ok(())
 }
@@ -131,5 +142,12 @@ async fn shutdown_signal() {
     let shutdown_res = receiver.recv_timeout(Duration::from_millis(2_000));
     if shutdown_res.is_err() {
         tracing::error!("failed to shutdown OpenTelemetry");
+    }
+}
+
+fn get_hosting_option() -> HostingOption {
+    match std::env::var("LAMBDA_TASK_ROOT") {
+        Ok(_) => HostingOption::Lambda,
+        Err(_) => HostingOption::HttpServer,
     }
 }
