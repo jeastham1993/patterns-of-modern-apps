@@ -1,3 +1,6 @@
+use axum::http::StatusCode;
+use axum::Router;
+use axum::routing::get;
 use rand::Rng;
 use rdkafka::{
     producer::{FutureProducer, FutureRecord},
@@ -159,6 +162,22 @@ async fn main() {
         }
     }
 
+    // Setup a fake healthcheck endpoint to allow simulator to be deployed to CloudRun which
+    // requires healthchecks
+    tokio::spawn(async move {
+        let app = Router::new()
+        .route("/health", get(health));
+
+        let port = std::env::var("PORT").unwrap_or("8080".to_string());
+
+        info!("Starting application on port {}", port);
+
+        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
+        axum::serve(listener, app.into_make_service())
+            .await
+            .unwrap();
+    });
+
     match signal::ctrl_c().await {
         Ok(()) => {
             info!("Shutting down");
@@ -189,4 +208,8 @@ fn get_customer_list() -> Vec<String> {
         "roger".to_string(),
         "florence".to_string(),
     ]
+}
+
+async fn health() -> StatusCode {
+    StatusCode::OK
 }
