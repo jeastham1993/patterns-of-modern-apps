@@ -233,7 +233,6 @@ make deploy-cloud-run
 ```sh
 fly app create --name loyalty-web
 fly app create --name loyalty-backend
-fly deploy
 ```
 
 ### Secrets

@@ -8,3 +8,4 @@ kill_timeout = 5
 
 [env]
 SERVICE_NAME = "loyalty-simulator-fly"
+LAMBDA_API_ENDPOINT = "https://loyalty-web.fly.dev"

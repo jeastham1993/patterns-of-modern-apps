@@ -34,6 +34,24 @@ deploy-cloud-run:
 deploy-aca:
 	cd azure-container-apps;terraform init;terraform apply --var-file dev.tfvars
 
+deploy-fly:
+	fly app create --name loyalty-web
+	fly app create --name loyalty-backend
+	fly secrets set -a loyalty-web DATABASE_URL="${DATABASE_URL}"
+	fly secrets set -a loyalty-backend DATABASE_URL="${DATABASE_URL}"
+	fly secrets set -a loyalty-backend BROKER="${BROKER}"
+	fly secrets set -a loyalty-backend KAFKA_USERNAME="${KAFKA_USERNAME}"
+	fly secrets set -a loyalty-backend KAFKA_PASSWORD="${KAFKA_PASSWORD}"
+	fly deploy -c fly-web.toml
+	fly deploy -c fly-backend.toml
+
+deploy-fly-simulator:
+	fly app create --name loyalty-simulator
+	fly secrets set -a loyalty-simulator BROKER="${BROKER}"
+	fly secrets set -a loyalty-simulator KAFKA_USERNAME="${KAFKA_USERNAME}"
+	fly secrets set -a loyalty-simulator KAFKA_PASSWORD="${KAFKA_PASSWORD}"
+	fly deploy -c fly-simulator.toml
+
 load:
 	cd src/simulator;cargo run
 
@@ -48,3 +66,7 @@ destroy-cloud-run:
 
 destroy-aca:
 	cd azure-container-apps;terraform init;terraform destroy --var-file dev.tfvars
+
+destroy-fly:
+	fly apps destroy loyalty-web
+	fly apps destroy loyalty-backend
