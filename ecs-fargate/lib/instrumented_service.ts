@@ -1,5 +1,10 @@
 import { Construct } from "constructs";
-import { IRole, ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import {
+  IRole,
+  ManagedPolicy,
+  Role,
+  ServicePrincipal,
+} from "aws-cdk-lib/aws-iam";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import {
   ContainerImage,
@@ -38,11 +43,12 @@ export class InstrumentedService extends Construct {
   constructor(scope: Construct, id: string, props: InstrumentedServiceProps) {
     super(scope, id);
 
-    var ddApiKeyParam = StringParameter.fromStringParameterName(
-      this,
-      "DDApiKey",
-      "DDApiKey"
-    );
+    var ddApiKey = process.env.DD_API_KEY ?? "";
+
+    const ddApiKeyParam = new StringParameter(this, "DDApiKeyParam", {
+      parameterName: "/loyalty/dd-api-key",
+      stringValue: ddApiKey,
+    });
 
     this.executionRole = new Role(this, `${props.serviceName}ExecutionRole`, {
       assumedBy: new ServicePrincipal("ecs-tasks.amazonaws.com"),
@@ -94,74 +100,82 @@ export class InstrumentedService extends Construct {
       containerName: props.serviceName,
       environment: baseEnvironmentVariables,
       secrets: props.secretVariables,
-      logging: LogDrivers.firelens({
-        options: {
-          Name: "datadog",
-          Host: "http-intake.logs.datadoghq.eu",
-          TLS: "on",
-          dd_service: props.serviceName,
-          dd_source: "aspnet",
-          dd_message_key: "log",
-          dd_tags: `project:${props.serviceName}`,
-          provider: "ecs",
-        },
-        secretOptions: {
-          apikey: Secret.fromSsmParameter(ddApiKeyParam),
-        },
-      }),
+      logging:
+        ddApiKey.length > 0
+          ? LogDrivers.firelens({
+              options: {
+                Name: "datadog",
+                Host: "http-intake.logs.datadoghq.eu",
+                TLS: "on",
+                dd_service: props.serviceName,
+                dd_source: "aspnet",
+                dd_message_key: "log",
+                dd_tags: `project:${props.serviceName}`,
+                provider: "ecs",
+              },
+              secretOptions: {
+                apikey: Secret.fromSsmParameter(ddApiKeyParam),
+              },
+            })
+          : undefined,
     });
     container.addDockerLabel("com.datadoghq.tags.env", props.environment);
     container.addDockerLabel("com.datadoghq.tags.service", props.serviceName);
     container.addDockerLabel("com.datadoghq.tags.version", props.version);
 
-    taskDefinition.addContainer("datadog-agent", {
-      image: ContainerImage.fromRegistry("public.ecr.aws/datadog/agent:latest"),
-      portMappings: [
-        {
-          containerPort: 4317,
+    // Dynamically add Datadog agent with exposed OTLP endpoint if a Datadog API key is provided
+    if (ddApiKey.length > 0) {
+      taskDefinition.addContainer("datadog-agent", {
+        image: ContainerImage.fromRegistry(
+          "public.ecr.aws/datadog/agent:latest"
+        ),
+        portMappings: [
+          {
+            containerPort: 4317,
+          },
+          {
+            containerPort: 5000,
+          },
+          {
+            containerPort: 5002,
+          },
+          {
+            containerPort: 8125,
+          },
+          {
+            containerPort: 8126,
+          },
+        ],
+        containerName: "datadog-agent",
+        environment: {
+          DD_SITE: "datadoghq.eu",
+          ECS_FARGATE: "true",
+          DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT: "0.0.0.0:4317",
+          DD_LOGS_ENABLED: "false",
+          DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true",
+          DD_APM_ENABLED: "true",
+          DD_APM_NON_LOCAL_TRAFFIC: "true",
+          DD_ENV: props.environment,
+          DD_SERVICE: props.serviceName,
+          DD_VERSION: props.version,
         },
-        {
-          containerPort: 5000,
+        secrets: {
+          DD_API_KEY: Secret.fromSsmParameter(ddApiKeyParam),
         },
-        {
-          containerPort: 5002,
-        },
-        {
-          containerPort: 8125,
-        },
-        {
-          containerPort: 8126,
-        },
-      ],
-      containerName: "datadog-agent",
-      environment: {
-        DD_SITE: "datadoghq.eu",
-        ECS_FARGATE: "true",
-        DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT: "0.0.0.0:4317",
-        DD_LOGS_ENABLED: "false",
-        DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true",
-        DD_APM_ENABLED: "true",
-        DD_APM_NON_LOCAL_TRAFFIC: "true",
-        DD_ENV: props.environment,
-        DD_SERVICE: props.serviceName,
-        DD_VERSION: props.version,
-      },
-      secrets: {
-        DD_API_KEY: Secret.fromSsmParameter(ddApiKeyParam),
-      },
-    });
+      });
 
-    taskDefinition.addFirelensLogRouter("firelens", {
-      essential: true,
-      image: ContainerImage.fromRegistry("amazon/aws-for-fluent-bit:stable"),
-      containerName: "log-router",
-      firelensConfig: {
-        type: FirelensLogRouterType.FLUENTBIT,
-        options: {
-          enableECSLogMetadata: true,
+      taskDefinition.addFirelensLogRouter("firelens", {
+        essential: true,
+        image: ContainerImage.fromRegistry("amazon/aws-for-fluent-bit:stable"),
+        containerName: "log-router",
+        firelensConfig: {
+          type: FirelensLogRouterType.FLUENTBIT,
+          options: {
+            enableECSLogMetadata: true,
+          },
         },
-      },
-    });
+      });
+    }
 
     this.service = new FargateService(this, `${props.serviceName}Service`, {
       cluster: props.cluster,
