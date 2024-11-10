@@ -1,4 +1,4 @@
-name: ci
+name: Build Application
 
 on:
   workflow_dispatch:
@@ -74,7 +74,7 @@ jobs:
         shell: bash
         run: |
           echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
-      - name: Build and push web
+      - name: Build and push backend
         uses: docker/build-push-action@v6
         with:
           file: Dockerfile-backend

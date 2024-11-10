@@ -1,4 +1,14 @@
 services:
+  simulator:
+    build:
+      context: .
+      dockerfile: ./Dockerfile-simulator
+    container_name: simulator
+    depends_on:
+      - kafka
+    environment:
+      - BROKER=kafka:29092
+      - LAMBDA_API_ENDPOINT=http://web:8080
   web:
     build:
       context: .

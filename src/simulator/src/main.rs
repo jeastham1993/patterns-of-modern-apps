@@ -19,6 +19,8 @@ async fn product_order_completed_message(customer_ids: Vec<String>) {
     let username = std::env::var("KAFKA_USERNAME");
     let password = std::env::var("KAFKA_PASSWORD");
     let broker = std::env::var("BROKER").expect("Broker should be set");
+    let events_per_second = std::env::var("EVENTS_PER_SECOND").unwrap_or("2".to_string());
+    let per_second = 1000 / events_per_second.parse::<u64>().unwrap_or(2);
 
     let producer: FutureProducer = match username {
         Ok(username) => {
@@ -68,12 +70,14 @@ async fn product_order_completed_message(customer_ids: Vec<String>) {
             )
             .await;
 
-        std::thread::sleep(Duration::from_millis(100));
+        std::thread::sleep(Duration::from_millis(per_second));
     }
 }
 
 async fn get_loyalty_points(api_endpoint: &str, customer_ids: Vec<String>) {
     let client = reqwest::Client::default();
+    let reqs_per_second = std::env::var("HTTP_REQ_PER_SECOND").unwrap_or("2".to_string());
+    let per_second = 1000 / reqs_per_second.parse::<u64>().unwrap_or(2);
 
     loop {
         let customer_id_for_call = rand::thread_rng().gen_range(1..customer_ids.len());
@@ -85,7 +89,7 @@ async fn get_loyalty_points(api_endpoint: &str, customer_ids: Vec<String>) {
 
         // tracing::info!("Get result for {} is ok: {:?}", customer, res.is_ok());
 
-        std::thread::sleep(Duration::from_millis(500));
+        std::thread::sleep(Duration::from_millis(per_second));
     }
 }
 
