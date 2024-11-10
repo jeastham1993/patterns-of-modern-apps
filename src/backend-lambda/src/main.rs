@@ -21,8 +21,8 @@ async fn function_handler<T: LoyaltyPoints + Send + Sync>(
     adapters: &ApplicationAdapters<T>,
 ) -> Result<(), Error> {
     for (_, val) in event.payload.records {
-        for ele in val {
-            let _ = process_message(adapters, ele).await;
+        for record in val {
+            let _ = process_message(adapters, record).await;
 
             // TODO: Implement dead letter handling
             // Current implementation will move forward IF a message can't be processed. There is no way
@@ -34,13 +34,13 @@ async fn function_handler<T: LoyaltyPoints + Send + Sync>(
     Ok(())
 }
 
-#[tracing::instrument(name = "process_message", skip(application, ele))]
-async fn process_message<T: LoyaltyPoints + Send + Sync>(application: &ApplicationAdapters<T>, ele: KafkaRecord) -> Result<(), ()> {
-    if ele.value.is_none() {
+#[tracing::instrument(name = "process_message", skip(application, record))]
+async fn process_message<T: LoyaltyPoints + Send + Sync>(application: &ApplicationAdapters<T>, record: KafkaRecord) -> Result<(), ()> {
+    if record.value.is_none() {
         return Ok(())
     }
 
-    let message_value = ele.value.unwrap();
+    let message_value = record.value.unwrap();
     let decoded = BASE64_STANDARD.decode(message_value).map_err(|e| {
         tracing::error!("Failure processing message: {}", e);
         
