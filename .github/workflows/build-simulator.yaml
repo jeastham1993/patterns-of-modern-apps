@@ -36,5 +36,5 @@ jobs:
         with:
           file: Dockerfile-simulator
           push: true
-          tags: plantpowerjames/modern-apps-loyalty-simulator:${{env.sha_short}}
+          tags: plantpowerjames/modern-apps-loyalty-simulator:${{env.sha_short}},plantpowerjames/modern-apps-loyalty-simulator:latest
           platforms: linux/amd64

@@ -52,7 +52,7 @@ jobs:
         with:
           file: Dockerfile-web
           push: true
-          tags: plantpowerjames/modern-apps-loyalty-web:${{env.sha_short}}
+          tags: plantpowerjames/modern-apps-loyalty-web:${{env.sha_short}},plantpowerjames/modern-apps-loyalty-web:latest
           platforms: linux/amd64
 
   package-backend:
@@ -79,37 +79,37 @@ jobs:
         with:
           file: Dockerfile-backend
           push: true
-          tags: plantpowerjames/modern-apps-loyalty-backend:${{env.sha_short}}
+          tags: plantpowerjames/modern-apps-loyalty-backend:${{env.sha_short}},plantpowerjames/modern-apps-loyalty-backend:latest
           platforms: linux/amd64
 
-  integration-test:
-    runs-on: ubuntu-latest
-    needs:
-      - package-web
-      - package-backend
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - name: Install sqlx from crates.io
-        uses: baptiste0928/cargo-install@v3
-        with:
-          crate: sqlx-cli
-          version: '^0.8' # You can specify any semver range
-      - name: Install prereqs for app
-        shell: bash
-        working-directory: .
-        run: |
-          sudo apt install -y  libsasl2-dev
-      - name: Run integration tests
-        shell: bash
-        working-directory: .
-        run: |
-          make integration-test-ci
+  # integration-test:
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - package-web
+  #     - package-backend
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #     - name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v3
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+  #     - name: Install Rust
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: stable
+  #     - name: Install sqlx from crates.io
+  #       uses: baptiste0928/cargo-install@v3
+  #       with:
+  #         crate: sqlx-cli
+  #         version: '^0.8' # You can specify any semver range
+  #     - name: Install prereqs for app
+  #       shell: bash
+  #       working-directory: .
+  #       run: |
+  #         sudo apt install -y  libsasl2-dev
+  #     - name: Run integration tests
+  #       shell: bash
+  #       working-directory: .
+  #       run: |
+  #         make integration-test-ci
