@@ -44,3 +44,13 @@ variable "momento_cache_name" {
   type    = string
   default = ""
 }
+
+variable "deploy_simulator" {
+  type = bool
+  default = false
+}
+
+variable "simulator_version" {
+  type = string
+  default = "latest"
+}

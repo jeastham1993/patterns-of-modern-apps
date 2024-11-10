@@ -1,0 +1,10 @@
+app = "loyalty-simulator"
+
+[build]
+dockerfile = "Dockerfile-simulator"
+
+kill_signal = "SIGINT"
+kill_timeout = 5
+
+[env]
+SERVICE_NAME = "loyalty-simulator-fly"

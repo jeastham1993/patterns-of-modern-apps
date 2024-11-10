@@ -17,6 +17,8 @@ export interface WebServiceProps {
 
 export class WebService extends Construct {
   service: InstrumentedService;
+  endpoint: string;
+  
   constructor(scope: Construct, id: string, props: WebServiceProps) {
     super(scope, id);
 
@@ -49,6 +51,8 @@ export class WebService extends Construct {
         internetFacing: true,
       }
     );
+
+    this.endpoint = sharedAlbWithListener.loadBalancerDnsName;
 
     const httpListner = new ApplicationListener(
       this,

@@ -25,6 +25,7 @@ locals {
   rev_name_canary         = "loyalty-web-${random_string.rev_name_postfix_canary.result}"
   backend_rev_name_live   = "loyalty-backend-${random_string.rev_name_postfix_live.result}"
   backend_rev_name_canary = "loyalty-backend-${random_string.rev_name_postfix_canary.result}"
+  simulator_rev_name_live   = "loyalty-simulator-${random_string.rev_name_postfix_live.result}"
 }
 
 resource "google_service_account" "cloudrun_service_identity" {
@@ -302,6 +303,111 @@ resource "google_cloud_run_v2_service" "loyalty_backend" {
   }
 }
 
+resource "google_cloud_run_v2_service" "loyalty_simulator" {
+  name     = "loyalty-simulator"
+  location = "europe-west2"
+
+  template {
+    revision        = local.simulator_rev_name_live
+    service_account = google_service_account.cloudrun_service_identity.email
+    containers {
+      image = "docker.io/plantpowerjames/modern-apps-loyalty-simulator:${var.simulator_version}"
+      env {
+        name  = "SERVICE_NAME"
+        value = "loyalty-simulator-gcp"
+      }
+      env {
+        name = "GCP_API_ENDPOINT"
+        value = google_cloud_run_v2_service.loyalty_web.uri
+      }
+      env {
+        name = "BROKER"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.kafka_broker.id
+            version = "1"
+          }
+        }
+      }
+      env {
+        name = "KAFKA_USERNAME"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.kafka_username.id
+            version = "1"
+          }
+        }
+      }
+      env {
+        name = "KAFKA_PASSWORD"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.kafka_password.id
+            version = "1"
+          }
+        }
+      }
+      env {
+        name  = "GCLOUD_PROJECT_ID"
+        value = data.google_project.project.project_id
+      }
+      dynamic "env" {
+        for_each = var.canary_enabled ? { "CANARY" = 1 } : {}
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+    }
+    containers {
+      name  = "datadog"
+      image = "gcr.io/datadoghq/serverless-init:latest"
+      env {
+        name  = "DD_ENV"
+        value = var.env
+      }
+      env {
+        name  = "DD_SITE"
+        value = var.dd_site
+      }
+      env {
+        name = "DD_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.dd_api_key.id
+            version = "1"
+          }
+        }
+      }
+      env {
+        name  = "DD_VERSION"
+        value = var.simulator_version
+      }
+      env {
+        name  = "GCLOUD_PROJECT_ID"
+        value = data.google_project.project.project_id
+      }
+    }
+    scaling {
+      min_instance_count = 1
+      max_instance_count = 2
+    }
+
+    annotations = {
+      "run.googleapis.com/cpu-throttling" = false
+    }
+  }
+
+  traffic {
+    type = "TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION"
+    # live serves 100% by default. If canary is enabled, this traffic block controls canary
+    percent = 100
+    # revision is named live by default. When canary is enabled, a new revision named canary is deployed
+    revision = local.simulator_rev_name_live
+    tag      = local.simulator_rev_name_live
+  }
+}
+
 resource "google_secret_manager_secret_iam_member" "dd-secret-access" {
   secret_id = google_secret_manager_secret.dd_api_key.id
   role      = "roles/secretmanager.secretAccessor"
@@ -328,6 +434,12 @@ resource "google_secret_manager_secret_iam_member" "username-secret-access" {
 
 resource "google_secret_manager_secret_iam_member" "password-secret-access" {
   secret_id = google_secret_manager_secret.kafka_password.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "momento-secret-access" {
+  secret_id = google_secret_manager_secret.momento_api_key.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_service_identity.email}"
 }

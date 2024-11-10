@@ -22,15 +22,15 @@ export class EcsFargateStack extends cdk.Stack {
       parameterName: "/loyalty/database-url",
       stringValue: process.env.DATABASE_URL!,
     });
-    const kafkaBroker = new StringParameter(this, "DatabaseUrlParam", {
+    const kafkaBroker = new StringParameter(this, "KafkaBrokerParam", {
       parameterName: "/loyalty/broker",
       stringValue: process.env.BROKER!,
     });
-    const kafkaUsername = new StringParameter(this, "DatabaseUrlParam", {
+    const kafkaUsername = new StringParameter(this, "KafkaUsernameParam", {
       parameterName: "/loyalty/kafka-username",
       stringValue: process.env.KAFKA_USERNAME!,
     });
-    const kafkaPassword = new StringParameter(this, "DatabaseUrlParam", {
+    const kafkaPassword = new StringParameter(this, "KafkaPasswordParam", {
       parameterName: "/loyalty/kafka-password",
       stringValue: process.env.KAFKA_PASSWORD!,
     });
@@ -40,6 +40,7 @@ export class EcsFargateStack extends cdk.Stack {
     });
 
     const imageTag = process.env.IMAGE_TAG ?? "latest";
+    const simulatorImageTag = process.env.SIMULATOR_IMAGE_TAG ?? "latest";
 
     const webService = new WebService(this, "LoyaltyWeb", {
       instrumentService: {
@@ -91,6 +92,34 @@ export class EcsFargateStack extends cdk.Stack {
         MOMENTO_API_KEY: ecs.Secret.fromSsmParameter(momentoApiKeyParam),
       },
     });
+
+    if ((process.env.DEPLOY_SIMULATOR ?? "") === "Y") {
+      const simulator = new InstrumentedService(this, "LoyaltySimulator", {
+        image: ecs.ContainerImage.fromRegistry(
+          `plantpowerjames/modern-apps-loyalty-simulator:${simulatorImageTag}`
+        ),
+        serviceName: "loyalty-simulator-fargate",
+        environment: "dev",
+        version: "latest",
+        cluster: cluster,
+        vpc: vpc,
+        portMappings: undefined,
+        envVariables: {
+          FARGATE_API_ENDPOINT: `http://${webService.endpoint}`,
+          HTTP_REQ_PER_SECOND: "1",
+          EVENTS_PER_SECOND: "1",
+        },
+        secretVariables: {
+          BROKER: ecs.Secret.fromSsmParameter(kafkaBroker),
+          KAFKA_USERNAME: ecs.Secret.fromSsmParameter(kafkaUsername),
+          KAFKA_PASSWORD: ecs.Secret.fromSsmParameter(kafkaPassword),
+        },
+      });
+
+      kafkaBroker.grantRead(simulator.executionRole);
+      kafkaUsername.grantRead(simulator.executionRole);
+      kafkaPassword.grantRead(simulator.executionRole);
+    }
 
     databaseUrlParam.grantRead(webService.service.executionRole);
     kafkaBroker.grantRead(webService.service.executionRole);

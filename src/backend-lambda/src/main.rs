@@ -1,4 +1,7 @@
-use loyalty_core::{configure_instrumentation, ApplicationAdapters, LoyaltyPoints, OrderConfirmedEventHandler, PostgresLoyaltyPoints};
+use loyalty_core::{
+    configure_instrumentation, ApplicationAdapters, LoyaltyPoints, OrderConfirmedEventHandler,
+    PostgresLoyaltyPoints,
+};
 use tracing::info;
 
 use aws_lambda_events::kafka::{KafkaEvent, KafkaRecord};
@@ -10,7 +13,7 @@ async fn main() -> Result<(), Error> {
     let _ = configure_instrumentation();
 
     let postgres_loyalty = PostgresLoyaltyPoints::new().await?;
-    
+
     let adapters = ApplicationAdapters::new(postgres_loyalty).await;
 
     run(service_fn(|evt| function_handler(evt, &adapters))).await
@@ -35,22 +38,28 @@ async fn function_handler<T: LoyaltyPoints + Send + Sync>(
 }
 
 #[tracing::instrument(name = "process_message", skip(application, record))]
-async fn process_message<T: LoyaltyPoints + Send + Sync>(application: &ApplicationAdapters<T>, record: KafkaRecord) -> Result<(), ()> {
-    if record.value.is_none() {
-        return Ok(())
-    }
+async fn process_message<T: LoyaltyPoints + Send + Sync>(
+    application: &ApplicationAdapters<T>,
+    record: KafkaRecord,
+) -> Result<(), ()> {
+    let message_value = match record.value {
+        Some(val) => val,
+        None => {
+            tracing::warn!("Empty message received, skipping");
+            return Ok(())
+        },
+    };
 
-    let message_value = record.value.unwrap();
     let decoded = BASE64_STANDARD.decode(message_value).map_err(|e| {
-        tracing::error!("Failure processing message: {}", e);
-        
+        tracing::error!("Failure decoding message: {}", e);
     })?;
-    
+
     let evt_payload = serde_json::from_slice(&decoded);
 
     match evt_payload {
         Ok(evt) => {
-            let handle_result = OrderConfirmedEventHandler::handle(&application.loyalty_points, evt).await;
+            let handle_result =
+                OrderConfirmedEventHandler::handle(&application.loyalty_points, evt).await;
 
             match handle_result {
                 Ok(_) => {
@@ -61,7 +70,7 @@ async fn process_message<T: LoyaltyPoints + Send + Sync>(application: &Applicati
                 Err(_) => {
                     tracing::error!("Failure processing 'OrderConfirmed' event");
                     Err(())
-                },
+                }
             }
         }
         Err(_) => {
