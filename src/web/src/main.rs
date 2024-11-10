@@ -13,6 +13,7 @@ use loyalty_core::{
     PostgresLoyaltyPoints, RetrieveLoyaltyAccountQueryHandler, SpendLoyaltyPointsCommand,
     SpendLoyaltyPointsCommandHandler,
 };
+use tracing::info;
 
 pub struct AppState<T: LoyaltyPoints + Send + Sync> {
     pub application: ApplicationAdapters<T>,
@@ -40,12 +41,14 @@ async fn main() -> Result<(), anyhow::Error> {
     // If the app is running on Lambda the `LAMBDA_TASK_ROOT` env var will be set
     match std::env::var("LAMBDA_TASK_ROOT") {
         Ok(_) => {
+            info!("Starting app using Lambda runtime and `lambda_http` crate.");
+
             let _ = run(app).await;
         }
         Err(_) => {
             let port = std::env::var("PORT").unwrap_or("8080".to_string());
 
-            tracing::info!("Starting application on port {}", port);
+            tracing::info!("Starting web server on port {}", port);
 
             let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
                 .await
