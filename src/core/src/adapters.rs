@@ -61,7 +61,13 @@ impl PostgresLoyaltyPoints {
                             .build();
 
                         match client {
-                            Ok(client) => Some(client),
+                            Ok(client) => {
+                                if cache_name.len() <= 0 {
+                                    None
+                                } else {
+                                    Some(client)
+                                }
+                            }
                             Err(_) => None,
                         }
                     }
@@ -111,11 +117,7 @@ impl PostgresLoyaltyPoints {
                 let cache_data = serde_json::to_string(account).unwrap_or(String::from(""));
 
                 match cache_client
-                    .set(
-                        &self.cache_name,
-                        account.customer_id(),
-                        cache_data,
-                    )
+                    .set(&self.cache_name, account.customer_id(), cache_data)
                     .await
                 {
                     Ok(_) => info!("Successfully cached"),
