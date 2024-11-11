@@ -59,7 +59,7 @@ impl PostgresLoyaltyPoints {
 
                         match client {
                             Ok(client) => {
-                                if cache_name.len() <= 0 {
+                                if cache_name.is_empty() {
                                     None
                                 } else {
                                     Some(client)
