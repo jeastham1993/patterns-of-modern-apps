@@ -113,6 +113,7 @@ When you deploy the application to one of the various cloud providers detailed b
 - [Neon for Postgres](https://neon.tech/)
 - [Confluent Cloud for Kafka](https://www.confluent.io/)
 - [Momento for caching](https://www.gomomento.com/)
+- [Make](https://formulae.brew.sh/formula/make)
 
 Confluent, Neon and Momento all have free tiers that you can use to provision **serverless** (yes, I said it) Kafka clusters, Postgres databases and caches. Neon is the closest I've seen to a fully serverless database service.
 
@@ -122,23 +123,12 @@ You can start up the entire application locally, both for local dev and for runn
 
 ```sh
 # Configure the required environment variable to send OTEL data to Jaeger running locally
-export OTLP_ENDPOINT=http://localhost:4317
-docker-compose up -d
+docker compose -f docker-compose-all.yml up -d
 cargo run --package loyalty-web
 cargo run --package loyalty-backend
 ```
 
-Once running locally, you can access the API endpoint on `http://localhost:8080`. An additional application is in the `src` folder to simulate load against your application. To configure and run:
-
-```sh
-# Set the Kafka broker
-export BROKER=localhost:9092
-# Set the group ID of your Kafka consumer
-export GROUP_ID=loyalty-local
-
-# Run the load simulator
-cargo run --package order-confirmed-simulator
-```
+Once running locally, you can access the API endpoint on `http://localhost:8080`. The `docker-compose-all` Docker compose file also starts up a 'simulator' that simulates load against the endpoints. If you open your web browser to the [Jaeger UI](http://localhost:16686/) you will see telemetry information.
 
 ## AWS
 
@@ -153,6 +143,8 @@ export KAFKA_USERNAME=
 export KAFKA_PASSWORD=
 # The database URL for the Postgres database in the format 'postgresql://postgres:mysupersecretlocalpassword@localhost/loyalty'
 export DATABASE_URL=
+# Optional: Enable Datadog for instrumentation
+export DD_API_KEY
 ```
 
 Once the environment variables are set, you can use any deployment methods below.
@@ -172,6 +164,8 @@ make deploy-lambda
 ## Azure
 
 The Azure Container Apps deployment uses Terraform as the IaC tool. You must create a [dev.tfvars](./azure-container-apps/dev.tfvars) file under `./azure-container-apps/dev.tfvars`.
+
+You can also deploy Azure Container Apps using the `az containerapp up` command in the Azure CLI.
 
 Create dev.tfvars file
 
