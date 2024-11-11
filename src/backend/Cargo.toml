@@ -6,6 +6,7 @@ resolver = "2"
 
 [dependencies]
 loyalty_core = { path = "../core" }
+loyalty_adapters = { path = "../adapters" }
 
 anyhow = { workspace = true }
 axum = "0.7.7"

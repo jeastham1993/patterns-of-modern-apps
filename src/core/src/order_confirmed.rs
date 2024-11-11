@@ -14,7 +14,7 @@ pub struct OrderConfirmedEventHandler {}
 
 impl OrderConfirmedEventHandler {
     #[tracing::instrument(name = "handle_order_confirmed",skip(loyalty_points, evt), fields(customer_id=evt.customer_id, order_id=evt.order_id, order_value=evt.order_value))]
-    pub async fn handle<T: LoyaltyPoints>(loyalty_points: &T, evt: OrderConfirmed) -> Result<(), ()> {
+    pub async fn handle<T: LoyaltyPoints>(loyalty_points: &T, evt: &OrderConfirmed) -> Result<(), ()> {
         info!(
             "Processing message for customer {} with id {} and value {}",
             evt.customer_id, evt.order_id, evt.order_value
@@ -31,7 +31,7 @@ impl OrderConfirmedEventHandler {
             Err(e) => match e {
                 crate::loyalty::LoyaltyErrors::AccountNotFound() => {
                         loyalty_points
-                        .new_account(evt.customer_id)
+                        .new_account(evt.customer_id.clone())
                         .await
                         .map_err(|e| {
                             tracing::error!("Failure creating new account: {:?}", e);
@@ -50,7 +50,7 @@ impl OrderConfirmedEventHandler {
             },
         };
 
-        let transaction = account.add_transaction(evt.order_id, evt.order_value);
+        let transaction = account.add_transaction(evt.order_id.clone(), evt.order_value);
 
         if transaction.is_ok() {
             let update_res = loyalty_points
@@ -104,7 +104,7 @@ mod tests {
             order_value: test_order_value,
         };
 
-        let result = OrderConfirmedEventHandler::handle(&loyalty_points, evt).await;
+        let result = OrderConfirmedEventHandler::handle(&loyalty_points, &evt).await;
 
         assert!(result.is_ok());
     }
@@ -132,7 +132,7 @@ mod tests {
             order_value: test_order_value,
         };
 
-        let result = OrderConfirmedEventHandler::handle(&loyalty_points, evt).await;
+        let result = OrderConfirmedEventHandler::handle(&loyalty_points, &evt).await;
 
         assert!(result.is_ok());
     }

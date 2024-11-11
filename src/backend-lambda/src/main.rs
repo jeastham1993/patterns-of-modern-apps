@@ -1,7 +1,7 @@
-use loyalty_core::{
-    configure_instrumentation, ApplicationAdapters, LoyaltyPoints, OrderConfirmedEventHandler,
-    PostgresLoyaltyPoints,
+use loyalty_adapters::{
+    configure_instrumentation, ApplicationAdapters, PostgresLoyaltyPoints,
 };
+use loyalty_core::{LoyaltyPoints, OrderConfirmedEventHandler};
 use tracing::info;
 
 use aws_lambda_events::kafka::{KafkaEvent, KafkaRecord};
@@ -59,7 +59,7 @@ async fn process_message<T: LoyaltyPoints + Send + Sync>(
     match evt_payload {
         Ok(evt) => {
             let handle_result =
-                OrderConfirmedEventHandler::handle(&application.loyalty_points, evt).await;
+                OrderConfirmedEventHandler::handle(&application.loyalty_points, &evt).await;
 
             match handle_result {
                 Ok(_) => {

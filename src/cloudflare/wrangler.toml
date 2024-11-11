@@ -1,0 +1,24 @@
+name = "loyalty-app"
+main = "build/worker/shim.mjs"
+compatibility_date = "2023-03-22"
+
+[placement]
+mode = "smart"
+
+[build]
+command = "cargo install -q worker-build && worker-build --release" # required
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[[d1_databases]]
+binding = "DB"
+database_name = "patterns-of-modern-apps"
+database_id = "46575538-220d-4073-b193-e1491d9b4103"
+
+[[queues.consumers]]
+queue = "order-completed"
+max_batch_size = 10
+max_retries = 10
+dead_letter_queue = "order-completed-dlq"

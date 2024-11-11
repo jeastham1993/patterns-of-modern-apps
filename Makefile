@@ -52,6 +52,17 @@ deploy-fly-simulator:
 	fly secrets set -a loyalty-simulator KAFKA_PASSWORD="${KAFKA_PASSWORD}"
 	fly deploy -c fly-simulator.toml
 
+cloudflare-worker:
+	cd src/web-cloudflare;npx wrangler deploy
+
+cloudflare-database:
+	npx wrangler d1 create patterns-of-modern-apps
+	cd src/web-cloudflare;npx wrangler d1 execute patterns-of-modern-apps --file=./migrations/schema.sql --remote
+
+cloudflare-queues:
+	npx wrangler queues create order-completed
+	npx wrangler queues create order-completed-dlq
+
 load:
 	cd src/simulator;cargo run
 

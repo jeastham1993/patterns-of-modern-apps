@@ -1,4 +1,5 @@
-use loyalty_core::{ApplicationAdapters, LoyaltyPoints, OrderConfirmedEventHandler};
+use loyalty_adapters::ApplicationAdapters;
+use loyalty_core::{LoyaltyPoints, OrderConfirmedEventHandler};
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -86,7 +87,7 @@ impl<T: LoyaltyPoints + Send + Sync> KafkaConnection<T> {
 
         match evt_payload {
             Ok(evt) => {
-                let handle_result = OrderConfirmedEventHandler::handle(&self.adapters.loyalty_points, evt).await;
+                let handle_result = OrderConfirmedEventHandler::handle(&self.adapters.loyalty_points, &evt).await;
 
                 match handle_result {
                     Ok(_) => {

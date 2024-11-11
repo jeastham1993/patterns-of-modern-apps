@@ -8,9 +8,9 @@ use axum::{
 };
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use lambda_http::run;
+use loyalty_adapters::{configure_instrumentation, ApplicationAdapters, PostgresLoyaltyPoints};
 use loyalty_core::{
-    configure_instrumentation, ApplicationAdapters, LoyaltyDto, LoyaltyErrors, LoyaltyPoints,
-    PostgresLoyaltyPoints, RetrieveLoyaltyAccountQueryHandler, SpendLoyaltyPointsCommand,
+    LoyaltyDto, LoyaltyErrors, LoyaltyPoints,RetrieveLoyaltyAccountQueryHandler, SpendLoyaltyPointsCommand,
     SpendLoyaltyPointsCommandHandler,
 };
 use tracing::info;

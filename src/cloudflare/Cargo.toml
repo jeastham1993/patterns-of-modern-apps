@@ -1,0 +1,39 @@
+[package]
+name = "loyalty-app-cloudflare"
+version = "0.1.0"
+edition = "2021"
+
+[package.metadata.release]
+release = false
+
+# https://github.com/rustwasm/wasm-pack/issues/1247
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+loyalty_core = { path = "../core" }
+
+anyhow.workspace = true
+serde.workspace = true
+tracing.workspace = true
+chrono.workspace = true
+
+worker = { version = "0.4.2", features = ["http", "axum", "d1", "queue"] }
+worker-macros = { version = "0.4.2", features = ["http"] }
+async-trait = "0.1.83"
+axum = { version = "0.7", default-features = false, features = [
+    "json",
+    "macros",
+] }
+axum-macros = "0.4.2"
+console_error_panic_hook = { version = "0.1.1" }
+wasm-bindgen-futures = "0.4"
+tower-service = "0.3.2"
+tracing-web = "0.1"
+tracing-subscriber = { version = "0.3", features = ['time', 'json'] }
+
+[package.metadata.cargo-machete]
+ignored = ["axum-macros", "worker-macros"]

@@ -8,6 +8,8 @@ At their core, modern applications are built on a set of common building blocks.
 - integration (queues, topics, buses, streams)
 - caches (because ya'know performance)
 - [observability](#observability) (because ya'know things break)
+- TODO: service to service communication
+- TODO: orchestration
 
 This repository aims to explore these different building blocks and their patterns and combinations. It will do all of that using serverless technologies.
 

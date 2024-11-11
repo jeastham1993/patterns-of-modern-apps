@@ -5,13 +5,17 @@ edition = "2021"
 
 [dependencies]
 loyalty_core = { path = "../core" }
+loyalty_adapters = { path = "../adapters" }
 
-anyhow = { workspace = true }
 serde_json = {workspace = true}
 tokio = {workspace = true}
 tracing = {workspace = true}
-async-trait = "0.1.83"
 lambda_runtime = {version = "0.13.0"}
 aws_lambda_events = {version = "0.15.1"}
 base64 = {version = "0.22"}
+
+# Dependency required at compile time
 openssl = { version = "0.10.35", features = ["vendored"] }
+
+[package.metadata.cargo-machete]
+ignored = ["openssl"]

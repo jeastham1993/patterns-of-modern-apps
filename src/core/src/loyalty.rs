@@ -48,16 +48,16 @@ pub struct LoyaltyAccount {
 impl LoyaltyAccount {
     const LOYALTY_ACCOUNT_PERCENTAGE: f32 = 0.5;
 
-    pub(crate) fn customer_id(&self) -> &str {
+    pub fn customer_id(&self) -> &str {
         &self.customer_id
     }
 
-    pub(crate) fn current_points(&self) -> &f32 {
+    pub fn current_points(&self) -> &f32 {
         &self.current_points
     }
 
     #[tracing::instrument(name = "new_loyalty_account")]
-    pub(crate) fn new(customer_id: String) -> anyhow::Result<Self, LoyaltyErrors> {
+    pub fn new(customer_id: String) -> anyhow::Result<Self, LoyaltyErrors> {
         if customer_id.is_empty() {
             return Err(LoyaltyErrors::InvalidValues(
                 "CustomerID cannot be empty".to_string(),
@@ -71,7 +71,7 @@ impl LoyaltyAccount {
         })
     }
 
-    pub(crate) fn from(
+    pub fn from(
         customer_id: String,
         current_points: f32,
         transactions: Vec<LoyaltyAccountTransaction>,
@@ -167,6 +167,26 @@ pub struct LoyaltyAccountTransaction {
     pub(crate) date: DateTime<Utc>,
     pub(crate) order_number: String,
     pub(crate) change: f32,
+}
+
+impl LoyaltyAccountTransaction {
+    pub fn new(date: DateTime<Utc>, order_number: String, change: f32) -> Self {
+        Self {
+            date,
+            order_number,
+            change
+        }
+    }
+
+    pub fn date(&self) -> DateTime<Utc> {
+        self.date.clone()
+    }
+    pub fn order_number(&self) -> String {
+        self.order_number.clone()
+    }
+    pub fn change(&self) -> f32 {
+        self.change.clone()
+    }
 }
 
 #[cfg_attr(any(test, feature = "mocks"), automock)]

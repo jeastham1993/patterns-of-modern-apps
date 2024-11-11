@@ -1,0 +1,2 @@
+CREATE TABLE IF NOT EXISTS loyalty (customer_id TEXT PRIMARY KEY, current_points REAL);
+CREATE TABLE IF NOT EXISTS loyalty_transaction (customer_id TEXT, date_epoch REAL, order_number TEXT, change REAL);

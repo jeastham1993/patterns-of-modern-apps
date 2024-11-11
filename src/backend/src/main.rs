@@ -1,7 +1,8 @@
 use axum::http::StatusCode;
 use axum::Router;
 use axum::routing::get;
-use loyalty_core::{configure_instrumentation, ApplicationAdapters, LoyaltyPoints, PostgresLoyaltyPoints};
+use loyalty_adapters::{configure_instrumentation, ApplicationAdapters, PostgresLoyaltyPoints};
+use loyalty_core::LoyaltyPoints;
 use tracing::info;
 
 use adapters::{KafkaConnection, KafkaCredentials};

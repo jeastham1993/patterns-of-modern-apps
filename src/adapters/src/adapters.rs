@@ -6,10 +6,7 @@ use momento::{cache::GetResponse, CacheClient, CredentialProvider};
 use sqlx::PgPool;
 use tracing::{info, warn};
 
-use crate::{
-    loyalty::{LoyaltyAccount, LoyaltyErrors, LoyaltyPoints},
-    LoyaltyAccountTransaction,
-};
+use loyalty_core::{LoyaltyAccount, LoyaltyAccountTransaction, LoyaltyErrors, LoyaltyPoints};
 
 pub struct ApplicationAdapters<T: LoyaltyPoints + Send + Sync> {
     pub loyalty_points: T,
@@ -158,11 +155,12 @@ impl PostgresLoyaltyPoints {
                     let loyalty_transactions = match transactions {
                         Ok(rows) => rows
                             .iter()
-                            .map(|row| LoyaltyAccountTransaction {
-                                change: row.change.unwrap(),
-                                order_number: row.order_number.clone().unwrap(),
-                                date: DateTime::from_timestamp_millis(row.date_epoch.unwrap())
-                                    .unwrap(),
+                            .map(|row| {
+                                LoyaltyAccountTransaction::new(
+                                    DateTime::from_timestamp_millis(row.date_epoch.unwrap()).unwrap(),
+                                    row.order_number.clone().unwrap(),
+                                    row.change.unwrap(),
+                                )
                             })
                             .collect(),
                         Err(_) => vec![],
@@ -242,9 +240,9 @@ impl LoyaltyPoints for PostgresLoyaltyPoints {
     VALUES ( $1, $2, $3, $4 )
             "#,
             account.customer_id(),
-            transaction.date.timestamp_millis(),
-            transaction.order_number,
-            transaction.change
+            transaction.date().timestamp_millis(),
+            transaction.order_number(),
+            transaction.change()
         )
         .execute(&self.db)
         .await;
