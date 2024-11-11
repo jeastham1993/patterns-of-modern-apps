@@ -15,7 +15,7 @@ head_sampling_rate = 1
 [[d1_databases]]
 binding = "DB"
 database_name = "patterns-of-modern-apps"
-database_id = "46575538-220d-4073-b193-e1491d9b4103"
+database_id = ""
 
 [[queues.consumers]]
 queue = "order-completed"

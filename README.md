@@ -222,6 +222,10 @@ gcloud auth application-default login
 make deploy-cloud-run
 ```
 
+## Cloudflare Workers
+
+
+
 ## Fly.IO
 
 [Fly.IO](https://fly.io) uses a custom CLI tool for deployment. First, ensure you have [installed the Fly CLI](https://fly.io/docs/flyctl/install/). Then, use the below commands to create the application and its secrets and then run the deployment.
