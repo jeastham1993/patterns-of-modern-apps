@@ -53,11 +53,11 @@ deploy-fly-simulator:
 	fly deploy -c fly-simulator.toml
 
 cloudflare-worker:
-	cd src/web-cloudflare;npx wrangler deploy
+	cd src/cloudflare;npx wrangler deploy
 
 cloudflare-database:
 	npx wrangler d1 create patterns-of-modern-apps
-	cd src/web-cloudflare;npx wrangler d1 execute patterns-of-modern-apps --file=./migrations/schema.sql --remote
+	cd src/cloudflare;npx wrangler d1 execute patterns-of-modern-apps --file=./migrations/schema.sql --remote
 
 cloudflare-queues:
 	npx wrangler queues create order-completed
@@ -81,3 +81,6 @@ destroy-aca:
 destroy-fly:
 	fly apps destroy loyalty-web
 	fly apps destroy loyalty-backend
+
+destroy-cloudflare:
+	cd src/cloudflare;npx wrangler d1 delete patterns-of-modern-apps;npx wrangler queues delete order-completed;npx wrangler queues delete order-completed-dlq;npx wrangler delete
