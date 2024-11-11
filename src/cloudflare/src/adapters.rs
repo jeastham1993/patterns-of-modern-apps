@@ -35,7 +35,7 @@ async fn insert_new_account_to_db(value: &D1DataAccessLayer, account: &LoyaltyAc
         .prepare("INSERT INTO loyalty ( customer_id, current_points ) VALUES ( ?1, ?2 )")
         .bind(&[
             JsValue::from(account.customer_id()),
-            JsValue::from(account.current_points().clone()),
+            JsValue::from(*account.current_points()),
         ])
         .unwrap()
         .run()
@@ -89,7 +89,7 @@ async fn retrieve_transactions_from_db(
                         LoyaltyAccountTransaction::new(
                             DateTime::from_timestamp_millis(transaction.date_epoch as i64).unwrap(),
                             transaction.order_number.clone(),
-                            transaction.change.clone(),
+                            transaction.change,
                         )
                     })
                     .collect(),
@@ -139,7 +139,7 @@ async fn update_total_points_in_db(value: &D1DataAccessLayer, account: &LoyaltyA
         .db
         .prepare("UPDATE loyalty SET current_points = $1 WHERE customer_id = $2")
         .bind(&[
-            JsValue::from(account.current_points().clone()),
+            JsValue::from(*account.current_points()),
             JsValue::from(account.customer_id()),
         ])
         .unwrap()
@@ -155,17 +155,17 @@ impl LoyaltyPoints for D1DataAccessLayer {
     ) -> anyhow::Result<LoyaltyAccount, LoyaltyErrors> {
         let account = LoyaltyAccount::new(customer_id)?;
 
-        insert_new_account_to_db(&self, &account).await;
+        insert_new_account_to_db(self, &account).await;
 
         Ok(account)
     }
 
     async fn retrieve(&self, customer_id: &str) -> anyhow::Result<LoyaltyAccount, LoyaltyErrors> {
-        let account = retrieve_from_db(&self, &customer_id).await;
+        let account = retrieve_from_db(self, customer_id).await;
 
         match account {
             Some(account) => {
-                let transactions = retrieve_transactions_from_db(&self, &customer_id).await;
+                let transactions = retrieve_transactions_from_db(self, customer_id).await;
 
                 Ok(
                     LoyaltyAccount::from(account.customer_id, account.current_points, transactions)
@@ -181,9 +181,9 @@ impl LoyaltyPoints for D1DataAccessLayer {
         account: &LoyaltyAccount,
         transaction: LoyaltyAccountTransaction,
     ) -> anyhow::Result<(), LoyaltyErrors> {
-        add_transaction_to_db(&self, account, &transaction).await;
+        add_transaction_to_db(self, account, &transaction).await;
 
-        update_total_points_in_db(&self, account).await;
+        update_total_points_in_db(self, account).await;
 
         Ok(())
     }

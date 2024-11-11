@@ -179,13 +179,13 @@ impl LoyaltyAccountTransaction {
     }
 
     pub fn date(&self) -> DateTime<Utc> {
-        self.date.clone()
+        self.date
     }
     pub fn order_number(&self) -> String {
         self.order_number.clone()
     }
     pub fn change(&self) -> f32 {
-        self.change.clone()
+        self.change
     }
 }
 
