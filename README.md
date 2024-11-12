@@ -109,6 +109,9 @@ Right, on to deployment, then...
 
 ## Prerequisites
 
+> [!CAUTION]
+> Deploying resources in this repository may incur costs in your cloud accounts account. Each provider specific section contains instructions on deleting all resources, it is recommended you do this when not in use.
+
 When you deploy the application to one of the various cloud providers detailed below, you must have a Postgres database and a Kafka cluster with a topic called `order-completed`. Of course, you can set up a Kafka cluster and Postgres-compatible database however you choose. However, I'd highly recommend checking out:
 
 - Docker (for local dev)
@@ -224,7 +227,48 @@ make deploy-cloud-run
 
 ## Cloudflare Workers
 
+Cloudflare workers are a relatively new technology in the world of modern app development, but they are a powerful one. Using the Javascript V8 runtime under the hood they are incredibly fast and lightweight to run. It also means that if your code compiles to web assembly, it can run inside Cloudflare Workers. 
 
+For us Rust developers, this is pretty useful. There is a crate maintained by Cloudflare ([workers-rs](https://github.com/cloudflare/workers-rs)) that makes gives you the required types and macros to write a Rust application that will run on Cloudflare Workers.
+
+The compilation to web assembly does add it's challenges. But remember, you've structured your application code in a way that makes the choice of compute largely irrelevant. Running on Cloudflare is as simple as adding a new ['entry point'](./src/cloudflare/) for your application and then hacking around with any non WASM supported parts of Rust. 
+
+On that note, the Cloudflare implementation of the loyalty point application does use native Cloudflare services. Namely, the [D1 database](https://developers.cloudflare.com/d1/) service and [Cloudflare Queues](https://developers.cloudflare.com/queues/). This is primarily to simplify the compilation to web assembly, but it also demonstrates how even shifting your database provider is relatively straighforward (ok, forget about the data migration part) is as simple as just adding a new [adapter](./src/cloudflare/src/adapters.rs).
+
+There are limitations to running Rust inside Cloudflare, and those limitations are pretty well documented inside the [Github Repo](https://github.com/cloudflare/workers-rs?tab=readme-ov-file#faq).
+
+### Deploy to Cloudflare
+
+You will need to ensure you have an account with Cloudflare, and have installed the [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/). 
+
+You'll also need to deploy the D1 database and queues. You can do that by running the below `make` command
+
+```sh
+make cloudflare-prereqs
+```
+
+After deployment, you will see a `database_id` property in your terminal. Copy that ID, and paste it into the [`wrangler.toml`](./src/cloudflare/wrangler.toml):
+
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "patterns-of-modern-apps"
+database_id = "<database_id_goes_here>"
+```
+
+Once you have copied over the database ID, run:
+
+```sh
+make deploy-cloudflare
+```
+
+And there you have it, you'll receive a URL back in the terminal after deployment. You can call that in the same way you would on any other hosting platform. You can also manually send messages onto the queue using the Cloudflare console.
+
+To teardown all created resources, run:
+
+```sh
+make destroy-cloudflare
+```
 
 ## Fly.IO
 
