@@ -51,7 +51,7 @@ jobs:
           file: Dockerfile-web
           push: true
           tags: plantpowerjames/modern-apps-loyalty-web:${{env.sha_short}},plantpowerjames/modern-apps-loyalty-web:latest
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
   package-backend:
     runs-on: ubuntu-latest
@@ -76,7 +76,7 @@ jobs:
           file: Dockerfile-backend
           push: true
           tags: plantpowerjames/modern-apps-loyalty-backend:${{env.sha_short}},plantpowerjames/modern-apps-loyalty-backend:latest
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
   # integration-test:
   #   runs-on: ubuntu-latest
