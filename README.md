@@ -70,19 +70,21 @@ One of the common pushbacks to adopting serverless technologies, or managed serv
 The ports & adapters or hexagonal architecture programming styles seem like a lot of ceremony. You need to write a lot of additional code, which adds misdirection and complexity to your code base. But it is precisely these patterns that help you avoid lock-in. Take the code structure for this application:
 
 ```
+- adapters
+ - adapters.rs
+ - lib.rs
 - backend
- - main.rs
+ - main.rs 
 - core
  - lib.rs
- - adapters.rs
  - loyalty.rs
 - web
- -main.rs
+ - main.rs
 ```
 
-The backend and web directories are the entry points for the respective applications. These directories set up the host and configure any host-specific stuff (HTTP routes, Kafka connections), and then all they do is call into the `core` library. The core library is split into the main business logic [`loyalty.rs`](./src/core/src/loyalty.rs) and then any [`adapters`](./src/core/src/adapters.rs) that the application might need.
+The backend and web directories are the entry points for the respective applications. These directories set up the host and configure any host-specific stuff (HTTP routes, Kafka connections). Both application hosts then use the `adapters` library to configure data access and the `core` library to call into the business logic. The core library contains the main business logic [`loyalty.rs`](./src/core/src/loyalty.rs) and `traits` that are implemented in the adapters crate.
 
-In its simplest form, the `loyalty.rs` file contains business logic and traits (or interfaces if you're unfamiliar with Rust). The `adapters` file contains the actual implementation:
+For example the [`LoyaltyPoints`](./src/core/src/loyalty.rs#194) is implemented in [`PostgresLoyaltyPoints` in](./src/adapters/src/adapters.rs#24). This means 
 
 ```Rust
 pub(crate) trait LoyaltyPoints {
@@ -99,9 +101,13 @@ pub(crate) trait LoyaltyPoints {
 }
 ```
 
+In its simplest form, the `loyalty.rs` file contains business logic and traits (or interfaces if you're unfamiliar with Rust). The `adapters` library contains the actual implementation:
+
 What benefit does this give you? As you can see in the repository, if you need to port part of the application to a different compute provider... In this case, say it's Lambda, it's as simple as adding a new [entrypoint](./src/backend-lambda/). That single package contains the infrastructure specifics, and then you can simply call the core library.
 
 Similarly, if you needed to switch your database provider (I hope you don't need to), you would need to change `adapters.rs`, and the rest of your code/business logic would stay the same. _I realise this doesn't account for the pain of a data migration_.
+
+In this repository you'll find an example of this same application running in [Cloudflare Workers](#cloudflare-workers). In Cloudflare, it uses a different databases, messaging system and compiles to web assembly. It runs with zero changes to the core application code. It's simply a seperate implementation of the `LoyaltyPoints` trait.
 
 A well-structured code base that separates applications from infrastructure will help you avoid lock-in. Also, aim for stateless compute.
 
